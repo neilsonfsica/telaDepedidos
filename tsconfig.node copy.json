@@ -1,7 +1,11 @@
 {
+  "extends": "@tsconfig/node22/tsconfig.json",
+  "include": ["src/**/*", "env.d.ts"],
+
   "compilerOptions": {
-    "module": "Node16",
-    "moduleResolution": "Node16",
+    "noEmit": true,
+    "module": "ESNext",
+    "moduleResolution": "Node",
     "target": "ESNext",
     "lib": ["ESNext", "DOM"],
     "jsx": "preserve",
@@ -11,6 +15,5 @@
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "types": ["node", "vuetify"]
-  },
-  "include": ["src/**/*", "env.d.ts"]
+  }
 }

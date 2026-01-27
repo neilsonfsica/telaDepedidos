@@ -1,301 +1,258 @@
-<script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import axios from 'axios'
-
-const items = ref([
-  {
-    cliente: 'Martinho da Villa',
-    vendedor: 'Sr. Omar',
-    status: 'Concluído',
-    minutos: 90,
-  },
-  {
-    cliente: 'Ana Clara',
-    vendedor: 'Camila',
-    status: 'Concluído',
-    minutos: 45,
-  },
-  {
-    cliente: 'Guilherme Mendonça',
-    vendedor: 'Malvo',
-    status: 'Em separação',
-    minutos: 50,
-  },
-  {
-    cliente: 'Martinho da Villa',
-    vendedor: 'Sr. Omar',
-    status: 'Concluído',
-    minutos: 90,
-  },
-  {
-    cliente: 'Ana Clara',
-    vendedor: 'Camila',
-    status: 'Concluído',
-    minutos: 45,
-  },
-  {
-    cliente: 'Guilherme Mendonça',
-    vendedor: 'Malvo',
-    status: 'Em separação',
-    minutos: 50,
-  },
-  {
-    cliente: 'Martinho da Villa',
-    vendedor: 'Sr. Omar',
-    status: 'Concluído',
-    minutos: 90,
-  },
-  {
-    cliente: 'Ana Clara',
-    vendedor: 'Camila',
-    status: 'Concluído',
-    minutos: 45,
-  },
-  {
-    cliente: 'Guilherme Mendonça',
-    vendedor: 'Malvo',
-    status: 'Em separação',
-    minutos: 50,
-  },
-  {
-    cliente: 'Martinho da Villa',
-    vendedor: 'Sr. Omar',
-    status: 'Concluído',
-    minutos: 90,
-  },
-  {
-    cliente: 'Ana Clara',
-    vendedor: 'Camila',
-    status: 'Concluído',
-    minutos: 45,
-  },
-  {
-    cliente: 'Guilherme Mendonça',
-    vendedor: 'Malvo',
-    status: 'Em separação',
-    minutos: 50,
-  },
-])
-
-const headers = [
-  { title: 'Cliente', value: 'cliente' },
-  { title: 'Vendedor', value: 'vendedor' },
-
-  { title: 'Tempo', value: 'minutos' },
-]
-
-const statusColor = (status: string) => {
-  switch (status) {
-    case 'Concluído':
-      return 'green'
-    case 'Em separação':
-      return 'orange'
-    default:
-      return 'grey'
-  }
-}
-
-const formatMinutes = (min: number) => {
-  const h = Math.floor(min / 60)
-  const m = min % 60
-  return `${h > 0 ? h + ':' : ''}${m.toString().padStart(2, '0')}`
-}
-
-const currentTime = ref('')
-const currentTemp = ref<string>(' ')
-
-const updateTime = () => {
-  currentTime.value = new Date().toLocaleString('pt-BR')
-}
-
-const currentCondition = ref('')
-const currentHumidity = ref('')
-
-const fetchWeather = async () => {
-  try {
-    const response = await axios.get('https://api.weatherapi.com/v1/current.json', {
-      params: {
-        key: '5b88dd3f527140e39b722316252808',
-        q: 'Brasília',
-        lang: 'pt',
-      },
-    })
-
-    const data = response.data
-    currentTemp.value = `${data.current.temp_c}°C`
-    currentCondition.value = data.current.condition.text
-    currentHumidity.value = `${data.current.humidity}%`
-  } catch (error) {
-    console.error('Erro ao buscar clima:', error)
-    currentTemp.value = 'N/A'
-    currentCondition.value = 'Indisponível'
-    currentHumidity.value = 'N/A'
-  }
-}
-
-const ads = [
-  '/Cartaz retrato culto de jovens religioso azul (1).png',
-  '/Cartaz retrato culto de jovens religioso azul.png',
-  '/Cartaz retrato culto de jovens religioso azul (2).png',
-]
-
-onMounted(() => {
-  fetchWeather()
-  updateTime()
-})
-
-setInterval(updateTime, 1000)
-</script>
-
 <template>
-  <v-app>
-    <v-app-bar app color="primary" dark>
-      <v-row align="center" class="w-100">
-        <v-toolbar-title class="font-weight-bold text-center" style="width: 100%; font-size: 30px">
-          <v-icon>mdi-file-document-edit-outline</v-icon>
-          Orçamentos em separação
-        </v-toolbar-title>
-
-        <v-row align="center" justify="end" class="mr-4" style="gap: 24px; flex-wrap: nowrap">
-          <div class="d-flex align-center">
-            <v-icon class="mr-1">mdi-thermometer</v-icon>
-            <span>{{ currentTemp }}</span>
-          </div>
-
-          <div class="d-flex align-center">
-            <v-icon class="mr-1">mdi-water-percent</v-icon>
-            <span>{{ currentHumidity }}</span>
-          </div>
-
-          <div class="d-flex align-center">
-            <v-icon class="mr-1">mdi-clock-outline</v-icon>
-            <span>{{ currentTime }}</span>
-          </div>
-        </v-row>
-      </v-row>
+  <v-app :dark="state.temaEscuro.value">
+    <v-app-bar color="primary" dark>
+      <v-toolbar-title>Controle Financeiro Pessoal</v-toolbar-title>
+      <v-spacer />
+      <v-btn icon @click="actions.toggleTema">
+        <v-icon>{{
+          state.temaEscuro.value ? 'mdi-weather-sunny' : 'mdi-moon-waning-crescent'
+        }}</v-icon>
+      </v-btn>
     </v-app-bar>
 
-    <v-main class="bg-blue-grey-lighten-5">
-      <v-container fluid>
-        <v-row no-gutters>
-          <v-col cols="8">
-            <div class="py-2 ml-2">
-              <v-card style="width: 980px; margin-left: 0">
-                <v-data-table
-                  class="elevation-1 striped-table"
-                  :headers="headers"
-                  :items="items"
-                  hide-default-footer
-                >
-                  <template #header.cliente>
-                    <v-icon small class="mr-1" size="small">mdi-account-outline</v-icon>
-                    Cliente
-                  </template>
+    <v-main>
+      <v-container>
+        <v-tabs v-model="state.abaSelecionada.value" grow>
+          <v-tab value="dashboard">Dashboard</v-tab>
+          <v-tab value="adicionar">Adicionar</v-tab>
+          <v-tab value="transacoes">Transações</v-tab>
+          <v-tab value="compras">Gestão de Compras</v-tab>
+        </v-tabs>
 
-                  <template #header.vendedor>
-                    <v-icon small class="mr-1" size="small">mdi-account-tie-outline</v-icon>
-                    Vendedor
-                  </template>
-
-                  <template #header.status>
-                    <v-icon small class="mr-1" size="small">mdi-information-outline</v-icon>
-                    Status
-                  </template>
-
-                  <template #header.minutos>
-                    <v-icon small class="mr-1" size="small">mdi-timer-outline</v-icon>
-                    Tempo
-                  </template>
-                  <template #item.status="{ item }">
-                    <v-chip :color="statusColor(item.status)">
-                      {{ item.status }}
-                    </v-chip>
-                  </template>
-
-                  <template #item.minutos="{ item }">
-                    <v-chip variant="tonal" class="bg-blue-lighten-4">
-                      ⏱ {{ formatMinutes(item.minutos) }}
-                    </v-chip>
-                  </template>
-                </v-data-table>
-              </v-card>
-            </div>
-          </v-col>
-
-          <v-col cols="4" class="py-2 pr-2 justify-content-end">
-            <v-card
-              class="pa-1 ml-1"
-              elevation="6"
-              rounded
-              max-width="450"
-              style="overflow: hidden"
-            >
-              <v-carousel
-                cycle
-                height="568"
-                hide-delimiter-background
-                show-arrows="hover"
-                hide-delimiters
-                interval="4000"
-                continuous
-                class="rounded"
-              >
-                <v-carousel-item v-for="(img, i) in ads" :key="i">
-                  <v-img
-                    :src="img"
-                    cover
-                    class="rounded"
-                    gradient="to bottom, rgba(0,0,0,.3), rgba(0,0,0,.7)"
-                    lazy-src="/path/to/placeholder.png"
+        <v-window v-model="state.abaSelecionada.value" class="mt-4">
+          <v-window-item value="dashboard">
+            <v-row>
+              <v-col cols="12" md="4">
+                <v-card class="dashboard-card">
+                  <div class="barra lateral green"></div>
+                  <v-card-title> <v-icon class="mr-2">mdi-cash</v-icon> Receitas </v-card-title>
+                  <v-card-text class="text-h5"
+                    >R$ {{ formatCurrency(state.receita.value) }}</v-card-text
                   >
-                    <v-row class="fill-height" align="end" justify="center" pa-4>
-                      <v-sheet class="bg-black bg-opacity-50 rounded px-3 py-1"> </v-sheet>
-                    </v-row>
-                  </v-img>
-                </v-carousel-item>
-              </v-carousel>
+                  <div class="descricao">Total de entradas</div>
+                </v-card>
+              </v-col>
+
+              <v-col cols="12" md="4">
+                <v-card class="dashboard-card">
+                  <div class="barra lateral red"></div>
+                  <v-card-title> <v-icon class="mr-2">mdi-cart</v-icon> Despesas </v-card-title>
+                  <v-card-text class="text-h5"
+                    >R$ {{ formatCurrency(state.despesa.value) }}</v-card-text
+                  >
+                  <div class="descricao">Total de saídas</div>
+                </v-card>
+              </v-col>
+
+              <v-col cols="12" md="4">
+                <v-card class="dashboard-card">
+                  <div
+                    class="barra lateral"
+                    :class="getters.saldo.value >= 0 ? 'blue' : 'orange'"
+                  ></div>
+                  <v-card-title> <v-icon class="mr-2">mdi-wallet</v-icon> Saldo </v-card-title>
+                  <v-card-text class="text-h5"
+                    >R$ {{ formatCurrency(state.receita.value - state.despesa.value) }}</v-card-text
+                  >
+                  <div class="descricao">Saldo atual</div>
+                </v-card>
+              </v-col>
+            </v-row>
+
+            <v-row class="mt-6">
+              <v-col cols="12" md="6">
+                <v-card class="pa-4">
+                  <h3>Receitas x Despesas</h3>
+                  <canvas id="grafico"></canvas>
+                </v-card>
+              </v-col>
+
+              <v-col cols="12" md="6">
+                <v-card class="pa-4">
+                  <h3>Despesas por Categoria</h3>
+                  <canvas id="graficoCategoria"></canvas>
+                </v-card>
+              </v-col>
+            </v-row>
+          </v-window-item>
+
+          <v-window-item value="adicionar">
+            <v-card class="pa-4">
+              <h3>Nova Transação</h3>
+              <v-form @submit.prevent="actions.salvarTransacao">
+                <v-select
+                  v-model="state.novaTransacao.value.tipo"
+                  :items="['Receita', 'Despesa']"
+                  label="Tipo"
+                  required
+                />
+                <v-text-field
+                  v-model.number="state.novaTransacao.value.valor"
+                  label="Valor (R$)"
+                  type="number"
+                  required
+                />
+                <v-select
+                  v-model="state.novaTransacao.value.categoria"
+                  :items="getters.categoriasFiltradas.value"
+                  label="Categoria"
+                  required
+                />
+
+                <v-textarea
+                  v-model="state.novaTransacao.value.descricao"
+                  label="Descrição"
+                  auto-grow
+                />
+                <v-btn type="submit" color="primary" block class="mt-3">
+                  <v-icon start>mdi-check</v-icon> Salvar
+                </v-btn>
+              </v-form>
             </v-card>
-          </v-col>
-        </v-row>
+          </v-window-item>
+
+          <v-window-item value="transacoes">
+            <v-row v-if="state.transacoes.value.length === 0">
+              <v-col cols="12">
+                <v-alert type="info">Nenhuma transação registrada</v-alert>
+              </v-col>
+            </v-row>
+            <v-row v-else>
+              <v-col v-for="(t, i) in state.transacoes.value" :key="i" cols="12" md="6">
+                <v-card outlined class="hoverable">
+                  <v-card-title>
+                    <v-icon class="mr-2">{{
+                      state.iconesCategoria.value[t.categoria] || 'mdi-cash'
+                    }}</v-icon>
+                    {{ t.tipo }} - {{ t.categoria }}
+                    <v-spacer />
+                    <span :class="t.tipo === 'Receita' ? 'text-green' : 'text-red'">
+                      R$ {{ formatCurrency(t.valor) }}
+                    </span>
+                  </v-card-title>
+                  <v-card-subtitle>{{ t.data }}</v-card-subtitle>
+                  <v-card-text>{{ t.descricao }}</v-card-text>
+                </v-card>
+              </v-col>
+            </v-row>
+          </v-window-item>
+
+          <v-window-item value="compras">
+            <v-card class="pa-4">
+              <h3>Gestão de Compras</h3>
+              <v-form @submit.prevent="actions.adicionarCompra">
+                <v-text-field v-model="state.novaCompra.value.nome" label="Nome do Item" required />
+                <v-text-field
+                  v-model.number="state.novaCompra.value.quantidade"
+                  label="Quantidade"
+                  type="number"
+                  required
+                />
+                <v-btn type="submit" color="primary" block class="mt-3">
+                  <v-icon start>mdi-cart-plus</v-icon> Adicionar Item
+                </v-btn>
+              </v-form>
+
+              <v-row class="mt-4">
+                <v-col v-for="(c, i) in state.compras.value" :key="i" cols="12" md="6">
+                  <v-card outlined>
+                    <v-card-title>
+                      {{ c.nome }}
+                      <v-spacer />
+                      <span :class="c.quantidade <= 1 ? 'text-red' : 'text-green'">
+                        {{ c.quantidade }} unidade(s)
+                      </span>
+                    </v-card-title>
+                    <v-card-text>
+                      <v-btn
+                        small
+                        color="primary"
+                        @click="actions.usarItem(i)"
+                        :disabled="c.quantidade === 0"
+                      >
+                        Usar 1 unidade
+                      </v-btn>
+                      <span v-if="c.quantidade <= 1" class="text-red ml-2">⚠️ Estoque baixo!</span>
+                    </v-card-text>
+                  </v-card>
+                </v-col>
+              </v-row>
+            </v-card>
+          </v-window-item>
+        </v-window>
       </v-container>
     </v-main>
   </v-app>
 </template>
 
-<style>
-.v-toolbar-title {
-  flex: 1;
-  text-align: center;
+<script setup lang="ts">
+import { onMounted } from 'vue'
+import { state, getters, actions, formatCurrency } from './geral'
+
+export interface Transacao {
+  data: string
+  tipo: 'Receita' | 'Despesa'
+  categoria: string
+  descricao: string
+  valor: number
 }
 
-.v-data-table tbody tr td {
-  font-size: 18px !important;
+export interface Compra {
+  nome: string
+  quantidade: number
 }
 
-.v-data-table thead tr th {
-  font-size: 25px !important;
-  font-weight: bold;
-  background-color: #ffecb3 !important;
-  color: #ff8f00 !important;
+onMounted(() => {
+  actions.atualizarGraficos()
+  actions.getDespesa()
+  actions.getReceita()
+})
+</script>
+
+<style scoped>
+.dashboard-card {
+  position: relative;
+  padding-left: 12px;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
 }
 
-.large-chip {
-  font-size: 16px !important;
-  height: 32px !important;
-  line-height: 32px !important;
-}
-.striped-table .v-data-table__tbody > .v-data-table__tr:nth-child(odd) {
-  background-color: #f9f9f9;
+.dashboard-card .barra {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 5px;
+  height: 100%;
 }
 
-.striped-table .v-data-table__tbody > .v-data-table__tr:nth-child(even) {
-  background-color: #e02828;
+.barra.green {
+  background-color: #43a047;
 }
-.temperature-display {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 24px;
-  font-weight: bold;
+.barra.red {
+  background-color: #e53935;
+}
+.barra.blue {
+  background-color: #1e88e5;
+}
+.barra.orange {
+  background-color: #fb8c00;
+}
+
+.descricao {
+  font-size: 0.9rem;
+  color: gray;
+  margin-top: 4px;
+}
+.hoverable:hover {
+  transform: translateY(-2px);
+  transition: transform 0.2s;
+}
+
+.text-green {
+  color: #43a047;
+}
+.text-red {
+  color: #e53935;
 }
 </style>
