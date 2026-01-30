@@ -27,12 +27,14 @@
     "dotenv": "^17.2.2",
     "mysql2": "^3.14.3",
     "pinia": "^3.0.3",
+    "sass": "^1.97.3",
     "v-calendar": "^3.1.2",
     "vue": "^3.5.18",
     "vue-router": "^4.5.1",
-    "vuetify": "^3.9.0-beta.1"
+    "vuetify": "^3.11.8"
   },
   "devDependencies": {
+    "@iconify/vue": "^5.0.0",
     "@playwright/test": "^1.54.1",
     "@prettier/plugin-oxc": "^0.0.4",
     "@tsconfig/node22": "^22.0.2",

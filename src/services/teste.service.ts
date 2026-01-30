@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { iParamInsert } from './interface.js'
 
 const caminho = `${import.meta.env.VITE_API_URL}/pedidos`
 
@@ -14,20 +15,17 @@ export const getReceita = async () => {
   })
   return data
 }
-export const insertMovimentacao = async (param: {
-  valor: number
-  descricao: string
-  categoria: string
-  tipo: string
-}) => {
+export const getMovimentacao = async () => {
+  const { data } = await axios.post(caminho, {
+    call: 'getMovimentacao',
+  })
+  return data
+}
+
+export const insertMovimentacao = async (param: iParamInsert) => {
   const { data } = await axios.post(caminho, {
     call: 'insertMovimentacao',
-    param: {
-      valor: param.valor,
-      descricao: param.descricao,
-      categoria: param.categoria,
-      tipo: param.tipo,
-    },
+    param: param,
   })
   return data
 }
@@ -35,4 +33,5 @@ export default {
   getDespesa,
   getReceita,
   insertMovimentacao,
+  getMovimentacao,
 }

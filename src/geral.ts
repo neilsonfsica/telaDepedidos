@@ -1,28 +1,31 @@
-import { ref, computed } from 'vue'
-import { Chart, registerables } from 'chart.js'
-import type { Transacao, Compra } from './App.vue'
+import { reactive, computed, ComputedRef, nextTick } from 'vue'
+import { Chart, registerables, ChartConfiguration, ChartOptions } from 'chart.js'
 import testeService from './services/teste.service.js'
+import { Icon } from '@iconify/vue'
+import { Compra, Transacao } from './services/interface.js'
 
 Chart.register(...registerables)
 
-export const state = {
-  temaEscuro: ref(true),
-  despesa: ref<any>(null),
-  receita: ref<any>(null),
-  abaSelecionada: ref('dashboard'),
-  transacoes: ref<Transacao[]>([]),
-  compras: ref<Compra[]>([]),
-  novaTransacao: ref<Transacao>({
+export const state = reactive({
+  movimentacao: [] as Transacao[],
+  escolherTipo: ['Despesa', 'Receita'],
+  temaEscuro: true,
+  despesa: 0,
+  receita: 0,
+  abaSelecionada: 'dashboard',
+  transacoes: [] as Transacao[],
+  compras: [] as Compra[],
+  novaTransacao: {
     data: new Date().toISOString().substring(0, 10),
     tipo: 'Despesa',
     categoria: '',
     descricao: '',
     valor: 0,
-  }),
-  novaCompra: ref<Compra>({ nome: '', quantidade: 1 }),
-  chart: null as Chart | null,
-  chartCategoria: null as Chart | null,
-  categoriasDespesa: ref([
+  } as Transacao,
+  novaCompra: { nome: '', quantidade: 1 } as Compra,
+  chart: null as Chart<'bar', number[], string> | null,
+  chartCategoria: null as Chart<'pie', number[], string> | null,
+  categoriasDespesa: [
     'Alimentação',
     'Transporte',
     'Lazer',
@@ -31,36 +34,38 @@ export const state = {
     'Água',
     'Luz',
     'Outros',
-  ]),
-  categoriasReceita: ref(['Salário', 'Investimentos', 'Outros']),
-  iconesCategoria: ref({
-    Alimentação: 'mdi-food',
-    Transporte: 'mdi-car',
-    Lazer: 'mdi-emoticon-happy',
-    Saúde: 'mdi-hospital-box',
-    Internet: 'mdi-wifi',
-    Água: 'mdi-water',
-    Luz: 'mdi-lightbulb',
-    Salário: 'mdi-cash',
-    Investimentos: 'mdi-finance',
-    Outros: 'mdi-cash-multiple',
-  } as Record<string, string>),
-}
+  ],
+  categoriasReceita: ['Salário', 'Investimentos', 'Outros'],
+  iconesCategoria: {
+    Alimentação: 'fluent-emoji:hamburger',
+    Transporte: 'fluent-emoji:oncoming-automobile',
+    Lazer: 'fluent-emoji:video-game',
+    Saúde: 'fluent-emoji:pill',
+    Internet: 'fluent-emoji:globe-with-meridians',
+    Água: 'fluent-emoji:droplet',
+    Luz: 'fluent-emoji:light-bulb',
+    Salário: 'fluent-emoji:money-bag',
+    Investimentos: 'fluent-emoji:chart-increasing',
+    Outros: 'fluent-emoji:package',
+    Escritório: 'fluent-emoji:briefcase',
+  } as Record<string, string>,
+})
 
-export const getters: any = {
-  categoriasFiltradas: computed(() =>
-    state.novaTransacao.value.tipo === 'Receita'
-      ? state.categoriasReceita.value
-      : state.categoriasDespesa.value,
+export const computeds = {
+  categoriaFiltro: computed(() =>
+    state.novaTransacao.tipo === 'Receita' ? state.categoriasReceita : state.categoriasDespesa,
   ),
   receitas: computed(() =>
-    state.transacoes.value.filter((t) => t.tipo === 'Receita').reduce((a, t) => a + t.valor, 0),
+    state.transacoes.reduce((total, t) => (t.tipo === 'Receita' ? total + t.valor : total), 0),
   ),
   despesas: computed(() =>
-    state.transacoes.value.filter((t) => t.tipo === 'Despesa').reduce((a, t) => a + t.valor, 0),
+    state.transacoes.reduce((total, t) => (t.tipo === 'Despesa' ? total + t.valor : total), 0),
   ),
-  saldo: computed(() => getters.receitas.value - getters.despesas.value),
 }
+
+export const saldo: ComputedRef<number> = computed(
+  () => computeds.receitas.value - computeds.despesas.value,
+)
 
 export function formatCurrency(value: number | string | null | undefined) {
   const num = Number(value) || 0
@@ -88,143 +93,125 @@ export function parseNumber(value: number | string | null | undefined) {
 
 export const actions = {
   async getDespesa() {
-    const response = await testeService.getDespesa()
-    state.despesa.value = response.total_despesas
-    await actions.atualizarGraficos()
+    try {
+      const response = await testeService.getDespesa()
+      state.despesa = response?.total_despesas || 0
+    } catch {
+      state.despesa = 0
+    }
   },
-
   async getReceita() {
-    const response = await testeService.getReceita()
-    state.receita.value = response.total_receita
-    await actions.atualizarGraficos()
+    try {
+      const response = await testeService.getReceita()
+      state.receita = response?.total_receita || 0
+    } catch {
+      state.receita = 0
+    }
   },
-
-  async toggleTema() {
-    state.temaEscuro.value = !state.temaEscuro.value
+  async getMovimentacao() {
+    try {
+      const response = await testeService.getMovimentacao()
+      state.transacoes = response || []
+    } catch {
+      state.transacoes = []
+    }
   },
-
+  toggleTema() {
+    state.temaEscuro = !state.temaEscuro
+  },
   async atualizarGraficos() {
-    const receita = parseNumber(state.receita?.value)
-    const despesa = parseNumber(state.despesa?.value)
-    console.debug(
-      '[atualizarGraficos] receita raw:',
-      state.receita?.value,
-      '=>',
-      receita,
-      typeof state.receita?.value,
-    )
-    console.debug(
-      '[atualizarGraficos] despesa raw:',
-      state.despesa?.value,
-      '=>',
-      despesa,
-      typeof state.despesa?.value,
-    )
+    await nextTick()
+    const receita = computeds.receitas.value
+    const despesa = computeds.despesas.value
 
     const canvas = document.getElementById('grafico') as HTMLCanvasElement | null
-    if (!canvas) {
-      console.warn('Canvas #grafico não encontrado')
-    } else {
-      const ctx2 = canvas.getContext('2d')
-      if (!ctx2) {
-        console.warn('Não foi possível obter 2D context do canvas #grafico')
-      } else {
-        const setupChart = () => {
-          if (state.chart) {
-            state.chart.data.labels = ['Receitas', 'Despesas']
-            if (state.chart.data.datasets && state.chart.data.datasets[0]) {
-              state.chart.data.datasets[0].data = [receita, despesa]
-              state.chart.data.datasets[0].backgroundColor = ['#43a047', '#e53935']
-            } else {
-              state.chart.data.datasets = [
+    if (canvas) {
+      const ctx = canvas.getContext('2d')
+      if (ctx) {
+        if (!state.chart) {
+          state.chart = new Chart<'bar', number[], string>(ctx, {
+            type: 'bar',
+            data: {
+              labels: ['Receitas', 'Despesas'],
+              datasets: [
                 {
-                  label: 'Valores em Reais',
+                  label: 'Valores em R$',
                   data: [receita, despesa],
                   backgroundColor: ['#43a047', '#e53935'],
                 },
-              ]
-            }
-
-            try {
-              ;(state.chart.options as any).scales = { y: { beginAtZero: true } }
-            } catch {}
-            state.chart.update()
-
-            try {
-              state.chart.resize()
-            } catch {}
-          } else {
-            state.chart = new Chart(ctx2, {
-              type: 'bar',
-              data: {
-                labels: ['Receitas', 'Despesas'],
-                datasets: [
-                  {
-                    label: 'Valores em Reais',
-                    data: [receita, despesa],
-                    backgroundColor: ['#43a047', '#e53935'],
-                  },
-                ],
-              },
-              options: {
-                responsive: true,
-                plugins: { legend: { display: false } },
-                scales: { y: { beginAtZero: true } },
-              },
-            })
-          }
+              ],
+            },
+            options: { responsive: true, maintainAspectRatio: true },
+          })
+        } else {
+          state.chart.data.datasets[0].data = [receita, despesa]
+          state.chart.update()
         }
-        window.requestAnimationFrame(() => setupChart())
       }
     }
 
     const despesasPorCategoria: Record<string, number> = {}
-    state.transacoes.value
+    state.transacoes
       .filter((t) => t.tipo === 'Despesa')
-      .forEach(
-        (t) =>
-          (despesasPorCategoria[t.categoria] = (despesasPorCategoria[t.categoria] || 0) + t.valor),
-      )
+      .forEach((t) => {
+        despesasPorCategoria[t.categoria] = (despesasPorCategoria[t.categoria] || 0) + t.valor
+      })
 
-    const ctxCatEl = document.getElementById('graficoCategoria') as HTMLCanvasElement | null
-    if (ctxCatEl) {
-      const ctxCat = ctxCatEl.getContext('2d')
-      if (!ctxCat) {
-        console.warn('Não foi possível obter 2D context do canvas #graficoCategoria')
-      } else {
-        if (state.chartCategoria) state.chartCategoria.destroy()
-        state.chartCategoria = new Chart(ctxCat, {
-          type: 'pie',
-          data: {
-            labels: Object.keys(despesasPorCategoria),
-            datasets: [
-              {
-                data: Object.values(despesasPorCategoria),
-                backgroundColor: Object.keys(despesasPorCategoria).map((c) => {
-                  switch (c) {
-                    case 'Alimentação':
-                      return '#e53935'
-                    case 'Transporte':
-                      return '#fb8c00'
-                    case 'Lazer':
-                      return '#43a047'
-                    case 'Saúde':
-                      return '#1e88e5'
-                    case 'Internet':
-                      return '#9c27b0'
-                    case 'Água':
-                      return '#00bcd4'
-                    case 'Luz':
-                      return '#ffeb3b'
-                    default:
-                      return '#888'
-                  }
-                }),
+    const canvasCat = document.getElementById('graficoCategoria') as HTMLCanvasElement | null
+    if (canvasCat) {
+      const ctxCat = canvasCat.getContext('2d')
+      if (ctxCat) {
+        state.chartCategoria?.destroy()
+        const categorias = Object.keys(despesasPorCategoria)
+        const valores = Object.values(despesasPorCategoria)
+        if (categorias.length > 0 && valores.some((v) => v > 0)) {
+          const cores: Record<string, string> = {
+            Alimentação: '#fbc02d',
+            Transporte: '#fb8c00',
+            Lazer: '#43a047',
+            Saúde: '#1e88e5',
+            Internet: '#9c27b0',
+            Água: '#00bcd4',
+            Luz: '#ffeb3b',
+            Escritório: '#607d8b',
+            Outros: '#888888',
+          }
+
+          state.chartCategoria = new Chart<'pie', number[], string>(ctxCat, {
+            type: 'pie',
+            data: {
+              labels: categorias,
+              datasets: [
+                {
+                  data: valores,
+                  backgroundColor: categorias.map((c) => cores[c] || '#888'),
+                  borderColor: '#fff',
+                  borderWidth: 2,
+                  borderRadius: 10,
+                  hoverOffset: 15,
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { position: 'bottom', labels: { boxWidth: 20, padding: 15 } },
+                tooltip: {
+                  callbacks: {
+                    label: (context) => {
+                      const label = context.label || ''
+                      const value = context.parsed || 0
+                      const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0)
+                      const percentage = ((value / total) * 100).toFixed(1)
+                      return `${label}: R$ ${formatCurrency(value)} (${percentage}%)`
+                    },
+                  },
+                },
               },
-            ],
-          },
-          options: { responsive: true, plugins: { legend: { position: 'bottom' } } },
-        })
+            },
+          })
+        }
       }
     }
   },
@@ -232,49 +219,32 @@ export const actions = {
   async salvarTransacao() {
     try {
       const response = await testeService.insertMovimentacao({
-        valor: state.novaTransacao.value.valor,
-        descricao: state.novaTransacao.value.descricao,
-        categoria: state.novaTransacao.value.categoria,
-        tipo: state.novaTransacao.value.tipo,
+        valor: state.novaTransacao.valor,
+        descricao: state.novaTransacao.descricao,
+        categoria: state.novaTransacao.categoria,
+        tipo: state.novaTransacao.tipo,
       })
-
-      console.debug('Resposta insertMovimentacao:', response)
-
       if (response?.insertId) {
-        state.transacoes.value.push({
-          ...state.novaTransacao.value,
-          id: response.insertId,
-        })
-
-        state.novaTransacao.value = {
+        state.transacoes.push({ ...state.novaTransacao, id: response.insertId })
+        state.novaTransacao = {
           data: new Date().toISOString().substring(0, 10),
           tipo: 'Despesa',
           categoria: '',
           descricao: '',
           valor: 0,
         }
-
         await actions.getDespesa()
         await actions.getReceita()
+        await actions.getMovimentacao()
         await actions.atualizarGraficos()
-
-        console.log('Transação salva com sucesso! ID:', response.insertId)
-      } else {
-        console.error('Erro: insertId não retornado pela API')
       }
-    } catch (error) {
-      console.error('Erro ao salvar transação:', error)
-    }
+    } catch {}
   },
-
-  async adicionarCompra() {
-    state.compras.value.push({ ...state.novaCompra.value })
-    state.novaCompra.value = { nome: '', quantidade: 1 }
+  adicionarCompra() {
+    state.compras.push({ ...state.novaCompra })
+    state.novaCompra = { nome: '', quantidade: 1 }
   },
-
-  async usarItem(i: number) {
-    if (state.compras.value[i].quantidade > 0) {
-      state.compras.value[i].quantidade -= 1
-    }
+  usarItem(i: number) {
+    if (state.compras[i].quantidade > 0) state.compras[i].quantidade -= 1
   },
 }
