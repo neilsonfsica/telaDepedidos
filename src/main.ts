@@ -9,25 +9,28 @@ import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import { aliases, mdi } from 'vuetify/iconsets/mdi'
 
+// ✅ IMPORT TOAST
+import Toast from 'vue-toastification'
+import 'vue-toastification/dist/index.css'
+
 const myCustomDarkTheme = {
   dark: true,
   colors: {
     background: '#0a0e27',
     surface: '#1a1d33',
     'surface-variant': '#20243d',
-    // Cores de Destaque
-    primary: '#00d4ff', // Ciano/Verde água para títulos
-    secondary: '#242844', // Fundo das tags (descrição)
 
-    // Status Financeiros (Cores extraídas da imagem)
-    success: '#00c853', // Verde vibrante (Receitas)
-    error: '#f51717ff', // Vermelho suave (Despesas)
-    info: '#9499b3', // Cinza para textos secundários e datas
-    warning: '#fb8c00', // Laranja para alertas
+    primary: '#00d4ff',
+    secondary: '#242844',
 
-    'avatar-receita': '#1e3a34', // Fundo escuro do ícone de receita
-    'avatar-despesa': '#3e2a3b', // Fundo escuro do ícone de despesa
-    'app-bar': '#0a0e27', // Cor sólida da barra superior
+    success: '#00c853',
+    error: '#f51717ff',
+    info: '#9499b3',
+    warning: '#fb8c00',
+
+    'avatar-receita': '#1e3a34',
+    'avatar-despesa': '#3e2a3b',
+    'app-bar': '#0a0e27',
   },
 }
 
@@ -54,5 +57,9 @@ const vuetify = createVuetify({
 })
 
 const app = createApp(App)
+
 app.use(vuetify)
+
+app.use(Toast)
+
 app.mount('#app')
