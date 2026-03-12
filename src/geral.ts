@@ -1,4 +1,4 @@
-import { reactive, computed, ComputedRef, nextTick, ref } from 'vue'
+import { reactive, computed, ComputedRef, nextTick } from 'vue'
 import { Chart, registerables } from 'chart.js'
 import testeService from './services/teste.service.js'
 import { Compra, Transacao, Vencimento } from './services/interface.js'
@@ -46,21 +46,69 @@ const vencimentoVazio = (): Vencimento => ({
 })
 
 export const state = reactive({
+  saldo: 0,
   usuarioLogado: false,
+  usuarioNome: '' as string,
+  usuarioEmail: '' as string, // ← ADICIONADO: guarda o email vindo do servidor
+  usuarioFoto: '' as string,
+  dialogPerfil: false,
+  perfilForm: {
+    email: '',
+  },
+
+  // Perfil dialog
+  perfilDialog: {
+    nomeLocal: '',
+    emailLocal: '',
+    senhaAtual: '',
+    novaSenha: '',
+    confirmarSenha: '',
+    erroPerfil: '',
+    loadingFoto: false,
+    loadingSalvar: false,
+  },
+
+  // Login
   loginForm: {
     email: '',
     senha: '',
   },
   erroLogin: '',
   loadingLogin: false,
-  movimentacao: [] as Transacao[],
-  escolherTipo: ['Despesa', 'Receita'],
+
+  // Cadastro
+  cadastroForm: {
+    nome: '',
+    email: '',
+    senha: '',
+  },
+  erroCadastro: '',
+  loadingCadastro: false,
+  telaCadastro: false,
+
+  // App
   temaEscuro: true,
+  abaSelecionada: 'dashboard',
+  escolherTipo: ['Despesa', 'Receita'],
+
+  // Financeiro
   despesa: 0,
   receita: 0,
-  abaSelecionada: 'dashboard',
+  movimentacao: [] as Transacao[],
   transacoes: [] as Transacao[],
+  novaTransacao: {
+    data: new Date().toISOString().substring(0, 10),
+    tipo: 'Despesa',
+    categoria: '',
+    descricao: '',
+    valor: 0,
+  } as Transacao,
+
+  // Compras
   compras: [] as Compra[],
+  novaCompra: { nome: '', quantidade: 1 } as Compra,
+
+  // Vencimentos
   vencimentos: [] as Vencimento[],
   vencimentoAtual: vencimentoVazio(),
   filtroMes: new Date().getMonth() + 1,
@@ -68,9 +116,13 @@ export const state = reactive({
   filtroStatus: 'todos' as 'todos' | 'abertos' | 'pagos',
   dialogCadastro: false,
   modoEdicao: false,
+
+  // Snackbar
   snackbar: false,
   snackbarText: '',
   snackbarColor: 'success',
+
+  // Dados estáticos
   meses: [
     { value: 1, title: 'Janeiro' },
     { value: 2, title: 'Fevereiro' },
@@ -99,16 +151,6 @@ export const state = reactive({
     'Streaming',
     'Outros',
   ],
-  novaTransacao: {
-    data: new Date().toISOString().substring(0, 10),
-    tipo: 'Despesa',
-    categoria: '',
-    descricao: '',
-    valor: 0,
-  } as Transacao,
-  novaCompra: { nome: '', quantidade: 1 } as Compra,
-  chart: null as Chart<'bar', number[], string> | null,
-  chartCategoria: null as Chart<'pie', number[], string> | null,
   categoriasDespesa: [
     'Alimentação',
     'Transporte',
@@ -133,59 +175,69 @@ export const state = reactive({
     Outros: 'fluent-emoji:package',
     Escritório: 'fluent-emoji:briefcase',
   } as Record<string, string>,
+
+  // Charts
+  chart: null as Chart<'bar', number[], string> | null,
+  chartCategoria: null as Chart<'pie', number[], string> | null,
 })
+
+const getVencimentosFiltrados = () => {
+  return state.vencimentos
+    .filter((v) => {
+      const data = new Date(v.dataVencimento)
+
+      const mesMatch = data.getMonth() + 1 === state.filtroMes
+      const anoMatch = data.getFullYear() === state.filtroAno
+
+      let statusMatch = true
+      if (state.filtroStatus === 'abertos') statusMatch = !v.pago
+      if (state.filtroStatus === 'pagos') statusMatch = v.pago
+
+      return mesMatch && anoMatch && statusMatch
+    })
+    .sort((a, b) => new Date(a.dataVencimento).getTime() - new Date(b.dataVencimento).getTime())
+}
 
 export const computeds = {
   categoriaFiltro: computed(() =>
     state.novaTransacao.tipo === 'Receita' ? state.categoriasReceita : state.categoriasDespesa,
   ),
+
   receitas: computed(() =>
-    state.transacoes.reduce((total, t) => (t.tipo === 'Receita' ? total + t.valor : total), 0),
-  ),
-  despesas: computed(() =>
-    state.transacoes.reduce((total, t) => (t.tipo === 'Despesa' ? total + t.valor : total), 0),
+    state.transacoes.reduce(
+      (total: number, t) => (t.tipo === 'Receita' ? total + t.valor : total),
+      0,
+    ),
   ),
 
-  // Anos disponíveis para o filtro de vencimentos
+  despesas: computed(() =>
+    state.transacoes.reduce(
+      (total: number, t) => (t.tipo === 'Despesa' ? total + t.valor : total),
+      0,
+    ),
+  ),
+
   anos: computed(() => {
     const anoAtual = new Date().getFullYear()
     return Array.from({ length: 5 }, (_, i) => anoAtual - 2 + i)
   }),
 
-  // Vencimentos filtrados por mês, ano e status
-  vencimentosFiltrados: computed(() => {
-    return state.vencimentos
-      .filter((v) => {
-        const data = new Date(v.dataVencimento)
-        const mesMatch = data.getMonth() + 1 === state.filtroMes
-        const anoMatch = data.getFullYear() === state.filtroAno
+  vencimentosFiltrados: computed(() => getVencimentosFiltrados()),
 
-        let statusMatch = true
-        if (state.filtroStatus === 'abertos') statusMatch = !v.pago
-        if (state.filtroStatus === 'pagos') statusMatch = v.pago
-
-        return mesMatch && anoMatch && statusMatch
-      })
-      .sort((a, b) => new Date(a.dataVencimento).getTime() - new Date(b.dataVencimento).getTime())
-  }),
-
-  totalAberto: computed(() =>
-    computeds.vencimentosFiltrados.value
+  totalAberto: computed<number>(() =>
+    getVencimentosFiltrados()
       .filter((v) => !v.pago)
-      .reduce((sum, v) => sum + parseFloat(String(v.valor) || '0'), 0),
+      .reduce((sum: number, v) => sum + (Number(v.valor) || 0), 0),
   ),
 
-  totalPago: computed(() =>
-    computeds.vencimentosFiltrados.value
+  totalPago: computed<number>(() =>
+    getVencimentosFiltrados()
       .filter((v) => v.pago)
-      .reduce((sum, v) => sum + parseFloat(String(v.valor) || '0'), 0),
+      .reduce((sum: number, v) => sum + (Number(v.valor) || 0), 0),
   ),
 
-  totalGeral: computed(() =>
-    computeds.vencimentosFiltrados.value.reduce(
-      (sum, v) => sum + parseFloat(String(v.valor) || '0'),
-      0,
-    ),
+  totalGeral: computed<number>(() =>
+    getVencimentosFiltrados().reduce((sum: number, v) => sum + (Number(v.valor) || 0), 0),
   ),
 }
 
@@ -283,9 +335,17 @@ export const actions = {
     state.usuarioLogado = false
     window.location.reload()
   },
+
   checkLogin() {
     const token = localStorage.getItem('token')
-
+    if (token) {
+      const decoded: any = JSON.parse(atob(token.split('.')[1]))
+      state.usuarioNome = decoded.nome || ''
+      state.usuarioEmail = decoded.email || ''
+      state.perfilForm.email = decoded.email
+      // Restaura a foto salva no localStorage (persiste entre reloads)
+      state.usuarioFoto = localStorage.getItem('usuarioFoto') || ''
+    }
     state.usuarioLogado = !!token
   },
 
@@ -300,12 +360,43 @@ export const actions = {
       })
 
       localStorage.setItem('token', response.token)
+      state.usuarioNome = response.usuario.nome || ''
+      state.usuarioEmail = response.usuario.email || ''
+      state.perfilForm.email = response.usuario.email
+      // Salva a foto no localStorage para persistir entre reloads
+      if (response.usuario.foto_url) {
+        state.usuarioFoto = response.usuario.foto_url
+        localStorage.setItem('usuarioFoto', response.usuario.foto_url)
+      }
       state.usuarioLogado = true
       window.location.reload()
     } catch (error: any) {
       state.erroLogin = error.response?.data?.error || 'Erro ao realizar login'
     } finally {
       state.loadingLogin = false
+    }
+  },
+
+  async cadastro() {
+    try {
+      state.loadingCadastro = true
+      state.erroCadastro = ''
+
+      await testeService.cadastro({
+        nome: state.cadastroForm.nome,
+        email: state.cadastroForm.email,
+        senha: state.cadastroForm.senha,
+      })
+
+      toast.success('Conta criada com sucesso! Faça login para continuar.')
+      state.telaCadastro = false
+      state.loginForm.email = state.cadastroForm.email
+      state.loginForm.senha = state.cadastroForm.senha
+      state.cadastroForm = { nome: '', email: '', senha: '' }
+    } catch (error: any) {
+      state.erroCadastro = error.response?.data?.error || 'Erro ao cadastrar'
+    } finally {
+      state.loadingCadastro = false
     }
   },
 
@@ -317,14 +408,17 @@ export const actions = {
       state.despesa = 0
     }
   },
+
   async getReceita() {
     try {
       const response = await testeService.getReceita()
       state.receita = response?.total_receita || 0
+      state.saldo = state.receita - state.despesa
     } catch {
       state.receita = 0
     }
   },
+
   async getMovimentacao() {
     try {
       const response = await testeService.getMovimentacao()
@@ -482,10 +576,12 @@ export const actions = {
       toast.error(error?.message || 'Erro ao salvar transação')
     }
   },
+
   adicionarCompra() {
     state.compras.push({ ...state.novaCompra })
     state.novaCompra = { nome: '', quantidade: 1 }
   },
+
   usarItem(i: number) {
     if (state.compras[i].quantidade > 0) state.compras[i].quantidade -= 1
   },
@@ -592,6 +688,76 @@ export const actions = {
     } catch (error) {
       console.error('Erro ao adicionar ao Google Calendar:', error)
       actions.mostrarMensagem('Erro ao adicionar ao calendário', 'error')
+    }
+  },
+
+  abrirPerfil() {
+    state.perfilDialog.nomeLocal = state.usuarioNome
+    state.perfilDialog.emailLocal = state.usuarioEmail
+    state.dialogPerfil = true
+  },
+
+  async onFotoSelecionada(event: Event) {
+    const input = event.target as HTMLInputElement
+    if (!input.files?.length) return
+
+    state.perfilDialog.loadingFoto = true
+    try {
+      const formData = new FormData()
+      formData.append('foto', input.files[0])
+      const response = await testeService.uploadFoto(formData)
+      state.usuarioFoto = response.foto_url
+      // Persiste a foto no localStorage para sobreviver ao reload
+      localStorage.setItem('usuarioFoto', response.foto_url)
+      toast.success('Foto atualizada com sucesso!')
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Erro ao enviar foto')
+    } finally {
+      state.perfilDialog.loadingFoto = false
+    }
+  },
+
+  async salvarPerfil() {
+    state.perfilDialog.erroPerfil = ''
+
+    if (
+      state.perfilDialog.novaSenha &&
+      state.perfilDialog.novaSenha !== state.perfilDialog.confirmarSenha
+    ) {
+      state.perfilDialog.erroPerfil = 'As senhas não coincidem'
+      return
+    }
+
+    state.perfilDialog.loadingSalvar = true
+    try {
+      // Sempre envia nome e email para o backend:
+      // - Se ja existia no state (veio do servidor), reenvia o valor original para nao limpar
+      // - Se nao existia, envia o que o usuario digitou no formulario
+      await testeService.atualizarPerfil({
+        nome: state.usuarioNome || state.perfilDialog.nomeLocal,
+        email: state.usuarioEmail || state.perfilDialog.emailLocal,
+        senhaAtual: state.perfilDialog.senhaAtual || undefined,
+        novaSenha: state.perfilDialog.novaSenha || undefined,
+      })
+
+      // Atualiza o state local apenas se o campo estava vazio antes
+      if (!state.usuarioNome && state.perfilDialog.nomeLocal) {
+        state.usuarioNome = state.perfilDialog.nomeLocal
+      }
+      if (!state.usuarioEmail && state.perfilDialog.emailLocal) {
+        state.usuarioEmail = state.perfilDialog.emailLocal
+        state.perfilForm.email = state.perfilDialog.emailLocal
+      }
+
+      state.perfilDialog.senhaAtual = ''
+      state.perfilDialog.novaSenha = ''
+      state.perfilDialog.confirmarSenha = ''
+      state.dialogPerfil = false
+      toast.success('Perfil atualizado com sucesso!')
+    } catch (error: any) {
+      state.perfilDialog.erroPerfil = error.response?.data?.error || 'Erro ao atualizar perfil'
+    } finally {
+      state.perfilDialog.loadingSalvar = false
     }
   },
 
