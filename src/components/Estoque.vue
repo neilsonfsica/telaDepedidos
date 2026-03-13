@@ -194,7 +194,7 @@ const barColor = (qty: number) => (qty <= 1 ? '#ef4444' : qty <= 3 ? '#f59e0b' :
         </div>
       </v-col>
 
-      <v-col v-for="(c, i) in comprasFiltradas" :key="c.id ?? i" cols="12" sm="6" lg="4">
+      <v-col v-for="(c, i) in comprasFiltradas" :key="c.id ?? i" cols="12" sm="4" lg="3">
         <div class="item-card" :class="isLow(c.quantidade) ? 'item-card--low' : 'item-card--ok'">
           <div class="item-img-area">
             <img v-if="c.imagem" :src="c.imagem" :alt="c.nome" class="item-img" />
@@ -554,7 +554,7 @@ const barColor = (qty: number) => (qty <= 1 ? '#ef4444' : qty <= 3 ? '#f59e0b' :
 
 .item-img-area {
   position: relative;
-  height: 160px;
+  height: 250px;
   background: #0d1117;
   overflow: hidden;
   flex-shrink: 0;
