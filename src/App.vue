@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, watch, nextTick } from 'vue'
+import { onMounted, watch, nextTick, computed } from 'vue'
 import { state, actions, computeds, saldo } from './geral'
 import Loguin from './loguin.vue'
 import AppBar from './components/AppBar.vue'
@@ -10,6 +10,55 @@ import Transacoes from './components/Transacoes.vue'
 import Estoque from './components/Estoque.vue'
 import Vencimentos from './components/Vencimentos.vue'
 import PerfilDialog from './components/PerfilDialog.vue'
+
+// ─── Evolução dos últimos 6 meses calculada das transações reais ─────────────
+const evolucao = computed(() => {
+  const hoje = new Date()
+  const mesesNomes = [
+    'Jan',
+    'Fev',
+    'Mar',
+    'Abr',
+    'Mai',
+    'Jun',
+    'Jul',
+    'Ago',
+    'Set',
+    'Out',
+    'Nov',
+    'Dez',
+  ]
+
+  return Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(hoje.getFullYear(), hoje.getMonth() - 5 + i, 1)
+    const mes = d.getMonth() // 0-11
+    const ano = d.getFullYear()
+
+    const transacoesMes = state.transacoes.filter((t) => {
+      const dt = new Date(t.data)
+      return dt.getMonth() === mes && dt.getFullYear() === ano
+    })
+
+    const receita = transacoesMes
+      .filter((t) => t.tipo === 'Receita')
+      .reduce((s, t) => s + Number(t.valor), 0)
+
+    const despesa = transacoesMes
+      .filter((t) => t.tipo === 'Despesa')
+      .reduce((s, t) => s + Number(t.valor), 0)
+
+    return { mes: mesesNomes[mes], receita, despesa }
+  })
+})
+
+// ─── Transações formatadas para o Dashboard ──────────────────────────────────
+const transacoesDashboard = computed(() =>
+  state.transacoes.map((t) => ({
+    categoria: t.categoria,
+    valor: Number(t.valor),
+    tipo: t.tipo === 'Receita' ? 'receita' : ('despesa' as 'receita' | 'despesa'),
+  })),
+)
 
 onMounted(async () => {
   await actions.checkLogin()
@@ -78,10 +127,18 @@ watch(
     <v-main>
       <v-container>
         <v-window v-model="state.abaSelecionada" class="mt-4 justify-center">
+          <!-- Dashboard -->
           <v-window-item value="dashboard">
-            <Dashboard :receita="state.receita" :despesa="state.despesa" :saldo="state.saldo" />
+            <Dashboard
+              :receita="state.receita"
+              :despesa="state.despesa"
+              :saldo="saldo"
+              :evolucao="evolucao"
+              :transacoes="transacoesDashboard"
+            />
           </v-window-item>
 
+          <!-- Adicionar -->
           <v-window-item value="adicionar">
             <AdicionarTransacao
               :nova-transacao="state.novaTransacao"
@@ -92,10 +149,12 @@ watch(
             />
           </v-window-item>
 
+          <!-- Transações -->
           <v-window-item value="transacoes">
             <Transacoes :transacoes="state.transacoes" :icones-categoria="state.iconesCategoria" />
           </v-window-item>
 
+          <!-- Estoque -->
           <v-window-item value="compras">
             <Estoque
               :compras="state.compras"
@@ -107,6 +166,7 @@ watch(
             />
           </v-window-item>
 
+          <!-- Vencimentos -->
           <v-window-item value="vencimentos">
             <Vencimentos
               :vencimentos="computeds.vencimentosFiltrados.value"

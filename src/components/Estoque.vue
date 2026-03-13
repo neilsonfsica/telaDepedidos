@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { Compra } from '../services/interface'
+import { imprimirEstoque, gerarExcelEstoque } from '../geral'
 
 const props = defineProps<{
   compras: Compra[]
@@ -124,17 +125,46 @@ const barColor = (qty: number) => (qty <= 1 ? '#ef4444' : qty <= 3 ? '#f59e0b' :
           · {{ totalUnidades }} unidades no total
         </p>
       </div>
-      <v-btn
-        color="primary"
-        rounded="pill"
-        elevation="0"
-        size="large"
-        class="hero-btn"
-        prepend-icon="mdi-plus"
-        @click="dialogOpen = true"
-      >
-        Nova Entrada
-      </v-btn>
+
+      <div class="hero-actions">
+        <v-btn
+          variant="outlined"
+          rounded="pill"
+          elevation="0"
+          size="large"
+          class="print-btn"
+          prepend-icon="mdi-printer-outline"
+          :disabled="compras.length === 0"
+          @click="imprimirEstoque(compras)"
+        >
+          Imprimir
+        </v-btn>
+
+        <v-btn
+          variant="outlined"
+          rounded="pill"
+          elevation="0"
+          size="large"
+          class="excel-btn"
+          prepend-icon="mdi-microsoft-excel"
+          :disabled="compras.length === 0"
+          @click="gerarExcelEstoque(compras)"
+        >
+          Exportar Excel
+        </v-btn>
+
+        <v-btn
+          color="primary"
+          rounded="pill"
+          elevation="0"
+          size="large"
+          class="hero-btn"
+          prepend-icon="mdi-plus"
+          @click="dialogOpen = true"
+        >
+          Nova Entrada
+        </v-btn>
+      </div>
     </div>
 
     <div class="header-bar mb-7">
@@ -207,7 +237,6 @@ const barColor = (qty: number) => (qty <= 1 ? '#ef4444' : qty <= 3 ? '#f59e0b' :
                 getIconInfo(c.nome).icon
               }}</v-icon>
             </div>
-
             <div
               class="status-badge"
               :class="isLow(c.quantidade) ? 'status-badge--red' : 'status-badge--green'"
@@ -259,9 +288,8 @@ const barColor = (qty: number) => (qty <= 1 ? '#ef4444' : qty <= 3 ? '#f59e0b' :
                 :disabled="c.quantidade === 0"
                 prepend-icon="mdi-minus-circle-outline"
                 @click="emit('usarItem', i)"
+                >Usar 1</v-btn
               >
-                Usar 1
-              </v-btn>
               <v-btn
                 variant="tonal"
                 color="success"
@@ -270,9 +298,8 @@ const barColor = (qty: number) => (qty <= 1 ? '#ef4444' : qty <= 3 ? '#f59e0b' :
                 class="usar-btn flex-1"
                 prepend-icon="mdi-plus-circle-outline"
                 @click="emit('aumentarItem', i)"
+                >+ 1</v-btn
               >
-                + 1
-              </v-btn>
             </div>
           </div>
         </div>
@@ -345,9 +372,8 @@ const barColor = (qty: number) => (qty <= 1 ? '#ef4444' : qty <= 3 ? '#f59e0b' :
                 rounded="lg"
                 class="flex-1"
                 @click="dialogOpen = false"
+                >Cancelar</v-btn
               >
-                Cancelar
-              </v-btn>
               <v-btn
                 type="submit"
                 color="primary"
@@ -355,9 +381,8 @@ const barColor = (qty: number) => (qty <= 1 ? '#ef4444' : qty <= 3 ? '#f59e0b' :
                 elevation="0"
                 class="flex-1"
                 prepend-icon="mdi-cart-plus"
+                >Adicionar</v-btn
               >
-                Adicionar
-              </v-btn>
             </div>
           </v-form>
         </v-card-text>
@@ -379,7 +404,6 @@ const barColor = (qty: number) => (qty <= 1 ? '#ef4444' : qty <= 3 ? '#f59e0b' :
   gap: 16px;
   flex-wrap: wrap;
 }
-
 .hero-eyebrow {
   display: flex;
   align-items: center;
@@ -391,7 +415,6 @@ const barColor = (qty: number) => (qty <= 1 ? '#ef4444' : qty <= 3 ? '#f59e0b' :
   color: #1a6fff;
   margin-bottom: 8px;
 }
-
 .eyebrow-dot {
   width: 6px;
   height: 6px;
@@ -399,7 +422,6 @@ const barColor = (qty: number) => (qty <= 1 ? '#ef4444' : qty <= 3 ? '#f59e0b' :
   background: #1a6fff;
   box-shadow: 0 0 8px #1a6fff;
 }
-
 .hero-title {
   font-size: 32px;
   font-weight: 800;
@@ -407,13 +429,45 @@ const barColor = (qty: number) => (qty <= 1 ? '#ef4444' : qty <= 3 ? '#f59e0b' :
   letter-spacing: -0.02em;
   line-height: 1.1;
 }
-
 .hero-sub {
   font-size: 13px;
   color: rgba(255, 255, 255, 0.35);
   margin-top: 6px;
 }
 
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.print-btn {
+  font-weight: 600 !important;
+  letter-spacing: 0.03em;
+  font-size: 13px !important;
+  height: 44px;
+  color: rgba(255, 255, 255, 0.6) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+.print-btn:hover {
+  color: #fff !important;
+  border-color: rgba(255, 255, 255, 0.35) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+.excel-btn {
+  font-weight: 600 !important;
+  letter-spacing: 0.03em;
+  font-size: 13px !important;
+  height: 44px;
+  color: rgba(34, 197, 94, 0.8) !important;
+  border-color: rgba(34, 197, 94, 0.2) !important;
+}
+.excel-btn:hover {
+  color: #4ade80 !important;
+  border-color: rgba(74, 222, 128, 0.4) !important;
+  background: rgba(74, 222, 128, 0.05) !important;
+}
 .hero-btn {
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -434,14 +488,12 @@ const barColor = (qty: number) => (qty <= 1 ? '#ef4444' : qty <= 3 ? '#f59e0b' :
   border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 12px;
 }
-
 .hbar-stats {
   display: flex;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
 }
-
 .hstat {
   display: flex;
   align-items: center;
@@ -449,40 +501,33 @@ const barColor = (qty: number) => (qty <= 1 ? '#ef4444' : qty <= 3 ? '#f59e0b' :
   font-size: 13px;
   color: rgba(255, 255, 255, 0.45);
 }
-
 .hstat-val {
   font-size: 15px;
   font-weight: 700;
   color: #fff;
 }
-
 .hstat-sep {
   color: rgba(255, 255, 255, 0.2);
   font-size: 11px;
 }
-
 .hstat-lbl {
   font-size: 12px;
   color: rgba(255, 255, 255, 0.35);
 }
-
 .hbar-divider {
   width: 1px;
   height: 16px;
   background: rgba(255, 255, 255, 0.1);
   flex-shrink: 0;
 }
-
 .hstat--green .hstat-val,
 .hstat--green .v-icon {
   color: #4ade80 !important;
 }
-
 .hstat--red .hstat-val,
 .hstat--red .v-icon {
   color: #f87171 !important;
 }
-
 .hstat--purple .hstat-val,
 .hstat--purple .v-icon {
   color: #c4b5fd !important;
@@ -496,7 +541,6 @@ const barColor = (qty: number) => (qty <= 1 ? '#ef4444' : qty <= 3 ? '#f59e0b' :
   padding: 3px;
   gap: 2px;
 }
-
 .ftab {
   padding: 6px 16px;
   border-radius: 7px;
@@ -509,7 +553,6 @@ const barColor = (qty: number) => (qty <= 1 ? '#ef4444' : qty <= 3 ? '#f59e0b' :
   cursor: pointer;
   transition: all 0.15s;
 }
-
 .ftab:hover {
   color: #fff;
 }
@@ -539,12 +582,10 @@ const barColor = (qty: number) => (qty <= 1 ? '#ef4444' : qty <= 3 ? '#f59e0b' :
   display: flex;
   flex-direction: column;
 }
-
 .item-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
 }
-
 .item-card--ok {
   border-top-color: #22c55e;
 }
@@ -559,13 +600,11 @@ const barColor = (qty: number) => (qty <= 1 ? '#ef4444' : qty <= 3 ? '#f59e0b' :
   overflow: hidden;
   flex-shrink: 0;
 }
-
 .item-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
-
 .item-img-placeholder {
   width: 100%;
   height: 100%;
@@ -587,13 +626,11 @@ const barColor = (qty: number) => (qty <= 1 ? '#ef4444' : qty <= 3 ? '#f59e0b' :
   font-weight: 700;
   letter-spacing: 0.05em;
 }
-
 .status-badge--green {
   background: rgba(34, 197, 94, 0.2);
   color: #4ade80;
   border: 1px solid rgba(34, 197, 94, 0.3);
 }
-
 .status-badge--red {
   background: rgba(239, 68, 68, 0.2);
   color: #f87171;
@@ -606,14 +643,12 @@ const barColor = (qty: number) => (qty <= 1 ? '#ef4444' : qty <= 3 ? '#f59e0b' :
   display: flex;
   flex-direction: column;
 }
-
 .item-name {
   font-size: 16px;
   font-weight: 700;
   color: #fff;
   line-height: 1.2;
 }
-
 .item-cat {
   font-size: 11px;
   color: rgba(255, 255, 255, 0.35);
@@ -621,12 +656,10 @@ const barColor = (qty: number) => (qty <= 1 ? '#ef4444' : qty <= 3 ? '#f59e0b' :
   text-transform: uppercase;
   letter-spacing: 0.07em;
 }
-
 .delete-btn {
   opacity: 0.4;
   transition: opacity 0.15s;
 }
-
 .delete-btn:hover {
   opacity: 1;
 }
@@ -637,14 +670,12 @@ const barColor = (qty: number) => (qty <= 1 ? '#ef4444' : qty <= 3 ? '#f59e0b' :
   gap: 5px;
   margin: 12px 0 6px;
 }
-
 .qty-num {
   font-size: 34px;
   font-weight: 800;
   line-height: 1;
   letter-spacing: -0.02em;
 }
-
 .qty-unit {
   font-size: 13px;
   color: rgba(255, 255, 255, 0.35);
@@ -656,7 +687,6 @@ const barColor = (qty: number) => (qty <= 1 ? '#ef4444' : qty <= 3 ? '#f59e0b' :
   border-radius: 10px;
   overflow: hidden;
 }
-
 .qty-bar-fill {
   height: 100%;
   border-radius: 10px;
@@ -664,7 +694,6 @@ const barColor = (qty: number) => (qty <= 1 ? '#ef4444' : qty <= 3 ? '#f59e0b' :
     width 0.6s ease,
     background 0.3s;
 }
-
 .usar-btn {
   font-weight: 600 !important;
   letter-spacing: 0.04em !important;
@@ -675,7 +704,6 @@ const barColor = (qty: number) => (qty <= 1 ? '#ef4444' : qty <= 3 ? '#f59e0b' :
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
   overflow: hidden;
 }
-
 .dialog-header {
   display: flex;
   align-items: flex-start;
@@ -683,7 +711,6 @@ const barColor = (qty: number) => (qty <= 1 ? '#ef4444' : qty <= 3 ? '#f59e0b' :
   padding: 24px 24px 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 }
-
 .dialog-eyebrow {
   font-size: 11px;
   font-weight: 600;
@@ -692,7 +719,6 @@ const barColor = (qty: number) => (qty <= 1 ? '#ef4444' : qty <= 3 ? '#f59e0b' :
   color: #1a6fff;
   margin-bottom: 4px;
 }
-
 .dialog-title {
   font-size: 20px;
   font-weight: 800;
@@ -715,12 +741,10 @@ const barColor = (qty: number) => (qty <= 1 ? '#ef4444' : qty <= 3 ? '#f59e0b' :
   overflow: hidden;
   background: rgba(255, 255, 255, 0.02);
 }
-
 .upload-area:hover {
   border-color: #1a6fff;
   background: rgba(26, 111, 255, 0.05);
 }
-
 .upload-preview {
   width: 100%;
   height: 100%;
@@ -728,7 +752,6 @@ const barColor = (qty: number) => (qty <= 1 ? '#ef4444' : qty <= 3 ? '#f59e0b' :
   position: absolute;
   inset: 0;
 }
-
 .upload-clear {
   position: absolute;
   top: 8px;
@@ -745,7 +768,6 @@ const barColor = (qty: number) => (qty <= 1 ? '#ef4444' : qty <= 3 ? '#f59e0b' :
   color: #fff;
   z-index: 1;
 }
-
 .upload-hint {
   font-size: 13px;
   color: rgba(255, 255, 255, 0.45);
@@ -761,7 +783,6 @@ const barColor = (qty: number) => (qty <= 1 ? '#ef4444' : qty <= 3 ? '#f59e0b' :
   text-align: center;
   padding: 80px 24px;
 }
-
 .empty-icon-wrap {
   width: 80px;
   height: 80px;
@@ -772,14 +793,12 @@ const barColor = (qty: number) => (qty <= 1 ? '#ef4444' : qty <= 3 ? '#f59e0b' :
   justify-content: center;
   margin: 0 auto 20px;
 }
-
 .empty-title {
   font-size: 18px;
   font-weight: 700;
   color: rgba(255, 255, 255, 0.4);
   margin-bottom: 8px;
 }
-
 .empty-sub {
   font-size: 13px;
   color: rgba(255, 255, 255, 0.2);

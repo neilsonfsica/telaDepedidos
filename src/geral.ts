@@ -3,6 +3,7 @@ import { Chart, registerables } from 'chart.js'
 import testeService from './services/teste.service.js'
 import { Compra, Transacao, Vencimento } from './services/interface.js'
 import toast from './plugins/toast.js'
+import * as XLSX from 'xlsx'
 
 Chart.register(...registerables)
 
@@ -182,16 +183,17 @@ export const computeds = {
     state.novaTransacao.tipo === 'Receita' ? state.categoriasReceita : state.categoriasDespesa,
   ),
 
+  // Soma das transações individuais (usada internamente)
   receitas: computed(() =>
     state.transacoes.reduce(
-      (total: number, t) => (t.tipo === 'Receita' ? total + t.valor : total),
+      (total: number, t) => (t.tipo === 'Receita' ? total + Number(t.valor) : total),
       0,
     ),
   ),
 
   despesas: computed(() =>
     state.transacoes.reduce(
-      (total: number, t) => (t.tipo === 'Despesa' ? total + t.valor : total),
+      (total: number, t) => (t.tipo === 'Despesa' ? total + Number(t.valor) : total),
       0,
     ),
   ),
@@ -220,9 +222,9 @@ export const computeds = {
   ),
 }
 
-export const saldo: ComputedRef<number> = computed(
-  () => computeds.receitas.value - computeds.despesas.value,
-)
+// ✅ Saldo usa state.receita e state.despesa (valores da API)
+// que são os mesmos valores exibidos nos cards de receita e despesa
+export const saldo: ComputedRef<number> = computed(() => state.receita - state.despesa)
 
 export function formatCurrency(value: number | string | null | undefined) {
   const num = Number(value) || 0
@@ -306,6 +308,241 @@ function formatarDataCalendar(data: Date) {
   return data.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
 }
 
+export function imprimirEstoque(compras: Compra[]) {
+  const categoriaMap: Record<string, string> = {
+    arroz: 'Grãos',
+    feijão: 'Grãos',
+    macarrão: 'Massas',
+    café: 'Bebidas',
+    leite: 'Bebidas',
+    frango: 'Carnes',
+    carne: 'Carnes',
+    ovos: 'Laticínios',
+    manteiga: 'Laticínios',
+    pão: 'Padaria',
+    farinha: 'Grãos',
+    sal: 'Temperos',
+    açúcar: 'Temperos',
+    óleo: 'Óleos',
+  }
+  const findCategoria = (nome: string) => {
+    const key = Object.keys(categoriaMap).find((k) => nome?.toLowerCase().includes(k))
+    return key ? categoriaMap[key] : 'Geral'
+  }
+
+  const agora = new Date().toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+  const totalUnid = compras.reduce((s, c) => s + (c.quantidade || 0), 0)
+  const emBaixa = compras.filter((c) => c.quantidade <= 5).length
+  const criticos = compras.filter((c) => c.quantidade <= 1).length
+
+  const linhas = compras
+    .slice()
+    .sort((a, b) => a.quantidade - b.quantidade)
+    .map((c) => {
+      const status = c.quantidade <= 1 ? '🔴 CRÍTICO' : c.quantidade <= 5 ? '🟡 BAIXO' : '🟢 OK'
+      return `
+        <tr>
+          <td>${c.nome.charAt(0).toUpperCase() + c.nome.slice(1)}</td>
+          <td>${findCategoria(c.nome)}</td>
+          <td style="font-weight:700;color:${c.quantidade <= 1 ? '#dc2626' : c.quantidade <= 5 ? '#d97706' : '#16a34a'}">
+            ${c.quantidade} unid.
+          </td>
+          <td>${status}</td>
+        </tr>`
+    })
+    .join('')
+
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/>
+    <title>Relatório de Estoque</title>
+    <style>
+      *{margin:0;padding:0;box-sizing:border-box}
+      body{font-family:'Segoe UI',Arial,sans-serif;color:#1a1a1a;padding:32px}
+      .header{border-bottom:3px solid #1a6fff;padding-bottom:16px;margin-bottom:24px}
+      .header h1{font-size:24px;font-weight:800;color:#1a6fff}
+      .header p{font-size:13px;color:#666;margin-top:4px}
+      .summary{display:flex;gap:16px;margin-bottom:24px}
+      .sum-card{flex:1;border:1px solid #e5e7eb;border-radius:8px;padding:12px 16px}
+      .sum-card .val{font-size:22px;font-weight:800}
+      .sum-card .lbl{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+      .sum-card--blue .val{color:#1a6fff}
+      .sum-card--green .val{color:#16a34a}
+      .sum-card--amber .val{color:#d97706}
+      .sum-card--red .val{color:#dc2626}
+      table{width:100%;border-collapse:collapse}
+      thead tr{background:#f3f4f6}
+      th{text-align:left;padding:10px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#555;border-bottom:2px solid #e5e7eb}
+      td{padding:10px 14px;font-size:13px;border-bottom:1px solid #f3f4f6}
+      tr:last-child td{border-bottom:none}
+      tr:nth-child(even){background:#fafafa}
+      .footer{margin-top:32px;padding-top:12px;border-top:1px solid #e5e7eb;font-size:11px;color:#aaa;display:flex;justify-content:space-between}
+    </style></head><body>
+    <div class="header">
+      <h1>📦 Relatório de Estoque</h1>
+      <p>Gerado em ${agora} · ${compras.length} produtos cadastrados</p>
+    </div>
+    <div class="summary">
+      <div class="sum-card sum-card--blue"><div class="val">${compras.length}</div><div class="lbl">Total de produtos</div></div>
+      <div class="sum-card sum-card--green"><div class="val">${totalUnid}</div><div class="lbl">Unidades em estoque</div></div>
+      <div class="sum-card sum-card--amber"><div class="val">${emBaixa}</div><div class="lbl">Itens em baixa (≤5)</div></div>
+      <div class="sum-card sum-card--red"><div class="val">${criticos}</div><div class="lbl">Itens críticos (≤1)</div></div>
+    </div>
+    <table>
+      <thead><tr><th>Produto</th><th>Categoria</th><th>Quantidade</th><th>Status</th></tr></thead>
+      <tbody>${linhas}</tbody>
+    </table>
+    <div class="footer">
+      <span>Controle Financeiro Pessoal — Gestão de Estoque</span>
+      <span>${agora}</span>
+    </div>
+    </body></html>`
+
+  const win = window.open('', '_blank', 'width=900,height=700')
+  if (!win) return
+  win.document.write(html)
+  win.document.close()
+  win.focus()
+  setTimeout(() => win.print(), 400)
+}
+
+export function gerarExcelEstoque(compras: Compra[]) {
+  const categoriaMap: Record<string, string> = {
+    arroz: 'Grãos',
+    feijão: 'Grãos',
+    macarrão: 'Massas',
+    café: 'Bebidas',
+    leite: 'Bebidas',
+    frango: 'Carnes',
+    carne: 'Carnes',
+    ovos: 'Laticínios',
+    manteiga: 'Laticínios',
+    pão: 'Padaria',
+    farinha: 'Grãos',
+    sal: 'Temperos',
+    açúcar: 'Temperos',
+    óleo: 'Óleos',
+  }
+  const findCategoria = (nome: string) => {
+    const key = Object.keys(categoriaMap).find((k) => nome?.toLowerCase().includes(k))
+    return key ? categoriaMap[key] : 'Geral'
+  }
+  const getStatus = (qty: number) => (qty <= 1 ? 'CRÍTICO' : qty <= 5 ? 'BAIXO' : 'OK')
+
+  const agora = new Date()
+  const dataStr = agora.toLocaleDateString('pt-BR')
+  const horaStr = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+
+  const totalUnid = compras.reduce((s, c) => s + (c.quantidade || 0), 0)
+  const emBaixa = compras.filter((c) => c.quantidade <= 5 && c.quantidade > 1).length
+  const criticos = compras.filter((c) => c.quantidade <= 1).length
+  const ok = compras.filter((c) => c.quantidade > 5).length
+
+  const wb = XLSX.utils.book_new()
+
+  // ── Aba 1: Lista completa ──────────────────────────────────────────
+  const dadosLista = [
+    ['RELATÓRIO DE ESTOQUE', '', '', '', ''],
+    [`Gerado em: ${dataStr} às ${horaStr}`, '', '', '', ''],
+    ['', '', '', '', ''],
+    ['PRODUTO', 'CATEGORIA', 'QUANTIDADE', 'STATUS', 'OBSERVAÇÃO'],
+    ...compras
+      .slice()
+      .sort((a, b) => a.quantidade - b.quantidade)
+      .map((c) => [
+        c.nome.charAt(0).toUpperCase() + c.nome.slice(1),
+        findCategoria(c.nome),
+        c.quantidade,
+        getStatus(c.quantidade),
+        c.quantidade <= 1 ? 'Repor imediatamente!' : c.quantidade <= 5 ? 'Repor em breve' : '',
+      ]),
+    ['', '', '', '', ''],
+    ['TOTAIS', '', '', '', ''],
+    ['Total de produtos', compras.length, '', '', ''],
+    ['Total de unidades', totalUnid, '', '', ''],
+    ['Itens OK (>5)', ok, '', '', ''],
+    ['Itens em baixa (2-5)', emBaixa, '', '', ''],
+    ['Itens críticos (≤1)', criticos, '', '', ''],
+  ]
+
+  const ws1 = XLSX.utils.aoa_to_sheet(dadosLista)
+
+  ws1['!cols'] = [{ wch: 28 }, { wch: 16 }, { wch: 14 }, { wch: 12 }, { wch: 24 }]
+
+  ws1['!merges'] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 4 } },
+    { s: { r: 1, c: 0 }, e: { r: 1, c: 4 } },
+  ]
+
+  XLSX.utils.book_append_sheet(wb, ws1, 'Estoque Completo')
+
+  // ── Aba 2: Itens em baixa ──────────────────────────────────────────
+  const baixos = compras
+    .filter((c) => c.quantidade <= 5)
+    .sort((a, b) => a.quantidade - b.quantidade)
+
+  const dadosBaixos = [
+    ['ITENS QUE PRECISAM DE REPOSIÇÃO', '', '', ''],
+    [`Gerado em: ${dataStr} às ${horaStr}`, '', '', ''],
+    ['', '', '', ''],
+    ['PRODUTO', 'CATEGORIA', 'QUANTIDADE ATUAL', 'PRIORIDADE'],
+    ...baixos.map((c) => [
+      c.nome.charAt(0).toUpperCase() + c.nome.slice(1),
+      findCategoria(c.nome),
+      c.quantidade,
+      c.quantidade <= 1 ? '🔴 URGENTE' : '🟡 MODERADA',
+    ]),
+    ...(baixos.length === 0 ? [['Nenhum item em baixa no momento', '', '', '']] : []),
+  ]
+
+  const ws2 = XLSX.utils.aoa_to_sheet(dadosBaixos)
+  ws2['!cols'] = [{ wch: 28 }, { wch: 16 }, { wch: 18 }, { wch: 16 }]
+  ws2['!merges'] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } },
+    { s: { r: 1, c: 0 }, e: { r: 1, c: 3 } },
+  ]
+
+  XLSX.utils.book_append_sheet(wb, ws2, 'Reposição Necessária')
+
+  // ── Aba 3: Resumo por categoria ────────────────────────────────────
+  const porCategoria: Record<string, { total: number; unidades: number }> = {}
+  compras.forEach((c) => {
+    const cat = findCategoria(c.nome)
+    if (!porCategoria[cat]) porCategoria[cat] = { total: 0, unidades: 0 }
+    porCategoria[cat].total += 1
+    porCategoria[cat].unidades += c.quantidade
+  })
+
+  const dadosCategoria = [
+    ['RESUMO POR CATEGORIA', '', ''],
+    [`Gerado em: ${dataStr} às ${horaStr}`, '', ''],
+    ['', '', ''],
+    ['CATEGORIA', 'QTD DE PRODUTOS', 'TOTAL DE UNIDADES'],
+    ...Object.entries(porCategoria)
+      .sort((a, b) => b[1].unidades - a[1].unidades)
+      .map(([cat, dados]) => [cat, dados.total, dados.unidades]),
+    ['', '', ''],
+    ['TOTAL GERAL', compras.length, totalUnid],
+  ]
+
+  const ws3 = XLSX.utils.aoa_to_sheet(dadosCategoria)
+  ws3['!cols'] = [{ wch: 22 }, { wch: 18 }, { wch: 20 }]
+  ws3['!merges'] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 2 } },
+    { s: { r: 1, c: 0 }, e: { r: 1, c: 2 } },
+  ]
+
+  XLSX.utils.book_append_sheet(wb, ws3, 'Por Categoria')
+
+  const nomeArquivo = `estoque_${agora.toISOString().slice(0, 10)}.xlsx`
+  XLSX.writeFile(wb, nomeArquivo)
+  toast.success('Excel gerado com sucesso!')
+}
+
 export const actions = {
   logout() {
     localStorage.removeItem('token')
@@ -384,6 +621,7 @@ export const actions = {
     try {
       const response = await testeService.getReceita()
       state.receita = Number(response?.total_receita) || 0
+      // ✅ Atualiza state.saldo junto para manter consistência
       state.saldo = state.receita - state.despesa
     } catch {
       state.receita = 0
@@ -402,16 +640,18 @@ export const actions = {
   async atualizarGraficos() {
     await nextTick()
 
-    // ✅ Usa state.receita e state.despesa — mesma fonte dos cards
     const receita = state.receita
     const despesa = state.despesa
     const maxVal = Math.max(receita, despesa, 1)
 
-    // ── Gráfico de barras — sempre destrói e recria ──
+    // ── Gráfico de barras ──
     const canvas = document.getElementById('grafico') as HTMLCanvasElement | null
     if (canvas) {
       const ctx = canvas.getContext('2d')
       if (ctx) {
+        // Destrói qualquer instância existente no canvas (inclusive a do Dashboard.vue)
+        const existing = Chart.getChart(canvas)
+        if (existing) existing.destroy()
         state.chart?.destroy()
         state.chart = null
 
@@ -474,18 +714,22 @@ export const actions = {
       }
     }
 
-    // ── Gráfico de pizza — usa state.transacoes ──
+    // ── Gráfico de pizza ──
     const despesasPorCategoria: Record<string, number> = {}
     state.transacoes
       .filter((t) => t.tipo === 'Despesa')
       .forEach((t) => {
-        despesasPorCategoria[t.categoria] = (despesasPorCategoria[t.categoria] || 0) + t.valor
+        despesasPorCategoria[t.categoria] =
+          (despesasPorCategoria[t.categoria] || 0) + Number(t.valor)
       })
 
     const canvasCat = document.getElementById('graficoCategoria') as HTMLCanvasElement | null
     if (canvasCat) {
       const ctxCat = canvasCat.getContext('2d')
       if (ctxCat) {
+        // Destrói qualquer instância existente no canvas (inclusive a do Dashboard.vue)
+        const existingCat = Chart.getChart(canvasCat)
+        if (existingCat) existingCat.destroy()
         state.chartCategoria?.destroy()
         state.chartCategoria = null
 
@@ -737,11 +981,6 @@ export const actions = {
       lembretes: v.lembretes,
     }
 
-    console.log('[salvarVencimento] param enviado ao banco:', param)
-    console.log('[salvarVencimento] enviarEmail:', v.enviarEmail)
-    console.log('[salvarVencimento] emailNotificacao:', v.emailNotificacao)
-    console.log('[salvarVencimento] lembretes:', v.lembretes)
-
     try {
       if (state.modoEdicao) {
         await testeService.updateVencimento(param)
@@ -754,11 +993,6 @@ export const actions = {
       if (v.adicionarCalendario) {
         actions.adicionarAoGoogleCalendar(v)
       }
-
-      console.log(
-        '[salvarVencimento] vai chamar agendarEmailsLembrete?',
-        v.enviarEmail && !!v.emailNotificacao && v.lembretes.length > 0,
-      )
 
       if (v.enviarEmail && v.emailNotificacao && v.lembretes.length > 0) {
         await actions.agendarEmailsLembrete(v)
@@ -773,21 +1007,9 @@ export const actions = {
   },
 
   async agendarEmailsLembrete(vencimento: Vencimento) {
-    console.log('[agendarEmailsLembrete] chamado com:', {
-      email: vencimento.emailNotificacao,
-      lembretes: vencimento.lembretes,
-      descricao: vencimento.descricao,
-    })
-
-    if (!vencimento.emailNotificacao || vencimento.lembretes.length === 0) {
-      console.warn('[agendarEmailsLembrete] Abortou: sem email ou sem lembretes')
-      return
-    }
+    if (!vencimento.emailNotificacao || vencimento.lembretes.length === 0) return
 
     for (const diasAntes of vencimento.lembretes) {
-      console.log(
-        `[agendarEmailsLembrete] Enviando para ${vencimento.emailNotificacao} — ${diasAntes}d antes`,
-      )
       try {
         await testeService.enviarEmailLembrete({
           email: vencimento.emailNotificacao,
@@ -797,7 +1019,6 @@ export const actions = {
           categoria: vencimento.categoria,
           diasAntes,
         })
-        console.log('[agendarEmailsLembrete] Email enviado com sucesso!')
       } catch (err: any) {
         console.error('[agendarEmailsLembrete] Erro:', err?.response?.data || err?.message || err)
       }

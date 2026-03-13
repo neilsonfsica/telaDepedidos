@@ -11,51 +11,185 @@ defineEmits<{
 </script>
 
 <template>
-  <v-app-bar class="app-bar-custom" elevation="0" fixed>
-    <v-container class="d-flex align-center py-0">
-      <v-toolbar-title class="text-gradient font-weight-bold d-flex align-center">
-        <v-avatar size="55" class="logo-avatar">
-          <v-icon size="30" color="#00ff88">mdi-chart-areaspline</v-icon>
-        </v-avatar>
-        Controle Financeiro Pessoal
-      </v-toolbar-title>
-
-      <v-spacer />
-
-      <div
-        class="d-flex align-center gap-2 mr-2"
-        style="cursor: pointer"
-        @click="$emit('abrirPerfil')"
-      >
-        <v-avatar size="36" style="border: 2px solid rgba(0, 255, 136, 0.4)" class="mr-2">
-          <v-img v-if="usuarioFoto" :src="usuarioFoto" cover />
-          <v-icon v-else size="20" color="#00ff88">mdi-account</v-icon>
-        </v-avatar>
-        <span style="color: #00ff88; font-size: 0.875rem; font-weight: 600">
-          {{ usuarioNome }}
-        </span>
+  <v-app-bar class="topbar" elevation="0" height="60">
+    <div class="topbar-inner">
+      <!-- Brand -->
+      <div class="brand" @click="$emit('abrirPerfil')">
+        <div class="brand-logo">
+          <v-icon size="16" color="#00ff88">mdi-chart-line</v-icon>
+        </div>
+        <span class="brand-text">Controle <em>Financeiro</em></span>
       </div>
 
-      <v-btn icon @click="$emit('logout')" color="#00ff88" variant="text">
-        <v-icon>mdi-logout</v-icon>
-      </v-btn>
-    </v-container>
+      <!-- User -->
+      <div class="user-area">
+        <div class="user-pill" @click="$emit('abrirPerfil')">
+          <div class="avatar-ring">
+            <div class="avatar-inner">
+              <v-img v-if="usuarioFoto" :src="usuarioFoto" cover />
+              <span v-else>{{ usuarioNome?.[0]?.toUpperCase() }}</span>
+            </div>
+          </div>
+          <span class="user-name">{{ usuarioNome }}</span>
+        </div>
+
+        <div class="sep" />
+
+        <button class="logout-btn" @click="$emit('logout')">
+          <v-icon size="15" color="inherit">mdi-logout-variant</v-icon>
+        </button>
+      </div>
+    </div>
   </v-app-bar>
 </template>
 
-<style>
-.logo-avatar {
-  background: rgba(0, 255, 136, 0.1) !important;
-  border: 1px solid rgba(0, 255, 136, 0.2);
+<style scoped>
+.topbar {
+  background: rgba(8, 12, 32, 0.98) !important;
+  border-bottom: none !important;
+  position: relative;
 }
-.v-toolbar.app-bar-custom {
-  background: rgba(10, 14, 39, 0.7) !important;
-  backdrop-filter: blur(15px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+
+.topbar::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 255, 136, 0.15) 30%,
+    rgba(0, 255, 136, 0.3) 50%,
+    rgba(0, 255, 136, 0.15) 70%,
+    transparent 100%
+  );
 }
-.text-gradient {
+
+.topbar-inner {
+  width: 100%;
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+}
+
+/* Brand */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.brand-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(0, 255, 136, 0.06);
+  border: 1px solid rgba(0, 255, 136, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.brand-logo:hover {
+  background: rgba(0, 255, 136, 0.12);
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.1);
+}
+
+.brand-text {
+  font-size: 14px;
+  font-weight: 700;
+  color: #c8d4e8;
+  letter-spacing: 0.2px;
+  font-style: normal;
+}
+
+.brand-text em {
   color: #00ff88;
-  font-weight: 800;
-  letter-spacing: -0.5px;
+  font-style: normal;
+}
+
+/* User area */
+.user-area {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.user-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 4px;
+  border-radius: 24px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.25s ease;
+}
+
+.user-pill:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.avatar-ring {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(0, 255, 136, 0.4), rgba(0, 180, 255, 0.4));
+  padding: 1.5px;
+  flex-shrink: 0;
+}
+
+.avatar-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #1a1f3a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #00ff88;
+  overflow: hidden;
+}
+
+.user-name {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #8896aa;
+  letter-spacing: 0.1px;
+}
+
+.sep {
+  width: 1px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.07);
+  margin: 0 4px;
+}
+
+.logout-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4a5568;
+  transition: all 0.2s ease;
+}
+
+.logout-btn:hover {
+  background: rgba(255, 70, 100, 0.08);
+  color: #ff4d6d;
 }
 </style>
