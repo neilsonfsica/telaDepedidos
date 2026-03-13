@@ -401,35 +401,80 @@ export const actions = {
 
   async atualizarGraficos() {
     await nextTick()
-    const receita = computeds.receitas.value
-    const despesa = computeds.despesas.value
 
+    // ✅ Usa state.receita e state.despesa — mesma fonte dos cards
+    const receita = state.receita
+    const despesa = state.despesa
+    const maxVal = Math.max(receita, despesa, 1)
+
+    // ── Gráfico de barras — sempre destrói e recria ──
     const canvas = document.getElementById('grafico') as HTMLCanvasElement | null
     if (canvas) {
       const ctx = canvas.getContext('2d')
       if (ctx) {
-        if (!state.chart) {
-          state.chart = new Chart<'bar', number[], string>(ctx, {
-            type: 'bar',
-            data: {
-              labels: ['Receitas', 'Despesas'],
-              datasets: [
-                {
-                  label: 'Valores em R$',
-                  data: [receita, despesa],
-                  backgroundColor: ['#43a047', '#e53935'],
+        state.chart?.destroy()
+        state.chart = null
+
+        state.chart = new Chart<'bar', number[], string>(ctx, {
+          type: 'bar',
+          data: {
+            labels: ['Receitas', 'Despesas'],
+            datasets: [
+              {
+                label: 'Valores em R$',
+                data: [receita, despesa],
+                backgroundColor: ['rgba(74, 222, 128, 0.7)', 'rgba(248, 113, 113, 0.7)'],
+                borderColor: ['#4ade80', '#f87171'],
+                borderWidth: 2,
+                borderRadius: 10,
+                borderSkipped: false,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: '#1a1d2e',
+                borderColor: 'rgba(255,255,255,0.1)',
+                borderWidth: 1,
+                titleColor: '#fff',
+                bodyColor: 'rgba(255,255,255,0.6)',
+                padding: 12,
+                callbacks: {
+                  label: (ctx) => ` R$ ${formatCurrency(ctx.parsed.y)}`,
                 },
-              ],
+              },
             },
-            options: { responsive: true, maintainAspectRatio: true },
-          })
-        } else {
-          state.chart.data.datasets[0].data = [receita, despesa]
-          state.chart.update()
-        }
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: {
+                  color: 'rgba(255,255,255,0.4)',
+                  font: { weight: 'bold', size: 13 },
+                },
+                border: { display: false },
+              },
+              y: {
+                min: 0,
+                max: Math.ceil(maxVal * 1.25),
+                grid: { color: 'rgba(255,255,255,0.05)' },
+                ticks: {
+                  color: 'rgba(255,255,255,0.3)',
+                  font: { size: 11 },
+                  callback: (v) => `R$ ${formatCurrency(Number(v))}`,
+                },
+                border: { display: false },
+              },
+            },
+          },
+        })
       }
     }
 
+    // ── Gráfico de pizza — usa state.transacoes ──
     const despesasPorCategoria: Record<string, number> = {}
     state.transacoes
       .filter((t) => t.tipo === 'Despesa')
@@ -442,20 +487,24 @@ export const actions = {
       const ctxCat = canvasCat.getContext('2d')
       if (ctxCat) {
         state.chartCategoria?.destroy()
+        state.chartCategoria = null
+
         const categoriasList = Object.keys(despesasPorCategoria)
         const valores = Object.values(despesasPorCategoria)
+
         if (categoriasList.length > 0 && valores.some((v) => v > 0)) {
           const cores: Record<string, string> = {
-            Alimentação: '#fbc02d',
-            Transporte: '#fb8c00',
-            Lazer: '#43a047',
-            Saúde: '#1e88e5',
-            Internet: '#9c27b0',
-            Água: '#00bcd4',
-            Luz: '#ffeb3b',
-            Escritório: '#607d8b',
-            Outros: '#888888',
+            Alimentação: '#fbbf24',
+            Transporte: '#fb923c',
+            Lazer: '#4ade80',
+            Saúde: '#60a5fa',
+            Internet: '#a855f7',
+            Água: '#22d3ee',
+            Luz: '#facc15',
+            Escritório: '#94a3b8',
+            Outros: '#6b7280',
           }
+
           state.chartCategoria = new Chart<'pie', number[], string>(ctxCat, {
             type: 'pie',
             data: {
@@ -463,11 +512,10 @@ export const actions = {
               datasets: [
                 {
                   data: valores,
-                  backgroundColor: categoriasList.map((c) => cores[c] || '#888'),
-                  borderColor: '#fff',
+                  backgroundColor: categoriasList.map((c) => (cores[c] || '#6b7280') + 'cc'),
+                  borderColor: categoriasList.map((c) => cores[c] || '#6b7280'),
                   borderWidth: 2,
-                  borderRadius: 10,
-                  hoverOffset: 15,
+                  hoverOffset: 12,
                 },
               ],
             },
@@ -475,13 +523,31 @@ export const actions = {
               responsive: true,
               maintainAspectRatio: false,
               plugins: {
-                legend: { position: 'bottom', labels: { boxWidth: 20, padding: 15 } },
+                legend: {
+                  position: 'bottom',
+                  labels: {
+                    boxWidth: 12,
+                    boxHeight: 12,
+                    borderRadius: 4,
+                    padding: 16,
+                    color: 'rgba(255,255,255,0.6)',
+                    font: { size: 12 },
+                    usePointStyle: true,
+                    pointStyle: 'circle',
+                  },
+                },
                 tooltip: {
+                  backgroundColor: '#1a1d2e',
+                  borderColor: 'rgba(255,255,255,0.1)',
+                  borderWidth: 1,
+                  titleColor: '#fff',
+                  bodyColor: 'rgba(255,255,255,0.6)',
+                  padding: 12,
                   callbacks: {
                     label: (context) => {
                       const value = context.parsed || 0
                       const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0)
-                      return `${context.label}: R$ ${formatCurrency(value)} (${((value / total) * 100).toFixed(1)}%)`
+                      return ` R$ ${formatCurrency(value)}  (${((value / total) * 100).toFixed(1)}%)`
                     },
                   },
                 },
