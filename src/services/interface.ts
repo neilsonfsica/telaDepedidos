@@ -40,3 +40,23 @@ export interface LoginDTO {
   email: string
   senha: string
 }
+export interface iEstoqueItem {
+  nome: string
+  categoria?: string
+  quantidade: number
+  imagem?: string | null
+}
+
+export interface iEstoqueUpdate {
+  id: number
+  nome?: string
+  categoria?: string
+  quantidade?: number
+  imagem?: string | null
+}
+export interface Compra {
+  id?: number
+  nome: string
+  quantidade: number
+  imagem?: string | null
+}
