@@ -22,3 +22,21 @@ export interface Compra {
   nome: string
   quantidade: number
 }
+export interface Vencimento {
+  id: number | null
+  descricao: string
+  categoria: string
+  valor: string | number
+  dataVencimento: string
+  lembretes: number[]
+  observacoes: string
+  pago: boolean
+  recorrente: boolean
+  enviarEmail: boolean
+  emailNotificacao: string
+  adicionarCalendario: boolean
+}
+export interface LoginDTO {
+  email: string
+  senha: string
+}
