@@ -49,14 +49,11 @@ export const state = reactive({
   saldo: 0,
   usuarioLogado: false,
   usuarioNome: '' as string,
-  usuarioEmail: '' as string, // ← ADICIONADO: guarda o email vindo do servidor
+  usuarioEmail: '' as string,
   usuarioFoto: '' as string,
   dialogPerfil: false,
-  perfilForm: {
-    email: '',
-  },
+  perfilForm: { email: '' },
 
-  // Perfil dialog
   perfilDialog: {
     nomeLocal: '',
     emailLocal: '',
@@ -68,30 +65,19 @@ export const state = reactive({
     loadingSalvar: false,
   },
 
-  // Login
-  loginForm: {
-    email: '',
-    senha: '',
-  },
+  loginForm: { email: '', senha: '' },
   erroLogin: '',
   loadingLogin: false,
 
-  // Cadastro
-  cadastroForm: {
-    nome: '',
-    email: '',
-    senha: '',
-  },
+  cadastroForm: { nome: '', email: '', senha: '' },
   erroCadastro: '',
   loadingCadastro: false,
   telaCadastro: false,
 
-  // App
   temaEscuro: true,
   abaSelecionada: 'dashboard',
   escolherTipo: ['Despesa', 'Receita'],
 
-  // Financeiro
   despesa: 0,
   receita: 0,
   movimentacao: [] as Transacao[],
@@ -104,11 +90,10 @@ export const state = reactive({
     valor: 0,
   } as Transacao,
 
-  // Compras
   compras: [] as Compra[],
   novaCompra: { nome: '', quantidade: 1 } as Compra,
+  loadingEstoque: false,
 
-  // Vencimentos
   vencimentos: [] as Vencimento[],
   vencimentoAtual: vencimentoVazio(),
   filtroMes: new Date().getMonth() + 1,
@@ -117,12 +102,10 @@ export const state = reactive({
   dialogCadastro: false,
   modoEdicao: false,
 
-  // Snackbar
   snackbar: false,
   snackbarText: '',
   snackbarColor: 'success',
 
-  // Dados estáticos
   meses: [
     { value: 1, title: 'Janeiro' },
     { value: 2, title: 'Fevereiro' },
@@ -137,6 +120,7 @@ export const state = reactive({
     { value: 11, title: 'Novembro' },
     { value: 12, title: 'Dezembro' },
   ],
+
   categorias: [
     'Aluguel',
     'Água',
@@ -162,6 +146,7 @@ export const state = reactive({
     'Outros',
   ],
   categoriasReceita: ['Salário', 'Investimentos', 'Outros'],
+
   iconesCategoria: {
     Alimentação: 'fluent-emoji:hamburger',
     Transporte: 'fluent-emoji:oncoming-automobile',
@@ -176,27 +161,21 @@ export const state = reactive({
     Escritório: 'fluent-emoji:briefcase',
   } as Record<string, string>,
 
-  // Charts
   chart: null as Chart<'bar', number[], string> | null,
   chartCategoria: null as Chart<'pie', number[], string> | null,
 })
 
-const getVencimentosFiltrados = () => {
-  return state.vencimentos
+const getVencimentosFiltrados = () =>
+  state.vencimentos
     .filter((v) => {
       const data = new Date(v.dataVencimento)
-
       const mesMatch = data.getMonth() + 1 === state.filtroMes
       const anoMatch = data.getFullYear() === state.filtroAno
-
-      let statusMatch = true
-      if (state.filtroStatus === 'abertos') statusMatch = !v.pago
-      if (state.filtroStatus === 'pagos') statusMatch = v.pago
-
+      const statusMatch =
+        state.filtroStatus === 'abertos' ? !v.pago : state.filtroStatus === 'pagos' ? v.pago : true
       return mesMatch && anoMatch && statusMatch
     })
     .sort((a, b) => new Date(a.dataVencimento).getTime() - new Date(b.dataVencimento).getTime())
-}
 
 export const computeds = {
   categoriaFiltro: computed(() =>
@@ -227,17 +206,17 @@ export const computeds = {
   totalAberto: computed<number>(() =>
     getVencimentosFiltrados()
       .filter((v) => !v.pago)
-      .reduce((sum: number, v) => sum + (Number(v.valor) || 0), 0),
+      .reduce((sum, v) => sum + (Number(v.valor) || 0), 0),
   ),
 
   totalPago: computed<number>(() =>
     getVencimentosFiltrados()
       .filter((v) => v.pago)
-      .reduce((sum: number, v) => sum + (Number(v.valor) || 0), 0),
+      .reduce((sum, v) => sum + (Number(v.valor) || 0), 0),
   ),
 
   totalGeral: computed<number>(() =>
-    getVencimentosFiltrados().reduce((sum: number, v) => sum + (Number(v.valor) || 0), 0),
+    getVencimentosFiltrados().reduce((sum, v) => sum + (Number(v.valor) || 0), 0),
   ),
 }
 
@@ -248,11 +227,10 @@ export const saldo: ComputedRef<number> = computed(
 export function formatCurrency(value: number | string | null | undefined) {
   const num = Number(value) || 0
   const sign = num < 0 ? '-' : ''
-  const abs = Math.abs(num)
   return (
     sign +
     new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
-      abs,
+      Math.abs(num),
     )
   )
 }
@@ -278,10 +256,9 @@ export function formatarData(data: string) {
 }
 
 export function formatarValor(valor: string | number) {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(Number(valor))
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+    Number(valor),
+  )
 }
 
 export function getIconeCategoria(categoria: string) {
@@ -343,7 +320,6 @@ export const actions = {
       state.usuarioNome = decoded.nome || ''
       state.usuarioEmail = decoded.email || ''
       state.perfilForm.email = decoded.email
-      // Restaura a foto salva no localStorage (persiste entre reloads)
       state.usuarioFoto = localStorage.getItem('usuarioFoto') || ''
     }
     state.usuarioLogado = !!token
@@ -353,17 +329,14 @@ export const actions = {
     try {
       state.loadingLogin = true
       state.erroLogin = ''
-
       const response = await testeService.login({
         email: state.loginForm.email,
         senha: state.loginForm.senha,
       })
-
       localStorage.setItem('token', response.token)
       state.usuarioNome = response.usuario.nome || ''
       state.usuarioEmail = response.usuario.email || ''
       state.perfilForm.email = response.usuario.email
-      // Salva a foto no localStorage para persistir entre reloads
       if (response.usuario.foto_url) {
         state.usuarioFoto = response.usuario.foto_url
         localStorage.setItem('usuarioFoto', response.usuario.foto_url)
@@ -381,13 +354,11 @@ export const actions = {
     try {
       state.loadingCadastro = true
       state.erroCadastro = ''
-
       await testeService.cadastro({
         nome: state.cadastroForm.nome,
         email: state.cadastroForm.email,
         senha: state.cadastroForm.senha,
       })
-
       toast.success('Conta criada com sucesso! Faça login para continuar.')
       state.telaCadastro = false
       state.loginForm.email = state.cadastroForm.email
@@ -403,7 +374,7 @@ export const actions = {
   async getDespesa() {
     try {
       const response = await testeService.getDespesa()
-      state.despesa = response?.total_despesas || 0
+      state.despesa = Number(response?.total_despesas) || 0
     } catch {
       state.despesa = 0
     }
@@ -412,7 +383,7 @@ export const actions = {
   async getReceita() {
     try {
       const response = await testeService.getReceita()
-      state.receita = response?.total_receita || 0
+      state.receita = Number(response?.total_receita) || 0
       state.saldo = state.receita - state.despesa
     } catch {
       state.receita = 0
@@ -508,11 +479,9 @@ export const actions = {
                 tooltip: {
                   callbacks: {
                     label: (context) => {
-                      const label = context.label || ''
                       const value = context.parsed || 0
                       const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0)
-                      const percentage = ((value / total) * 100).toFixed(1)
-                      return `${label}: R$ ${formatCurrency(value)} (${percentage}%)`
+                      return `${context.label}: R$ ${formatCurrency(value)} (${((value / total) * 100).toFixed(1)}%)`
                     },
                   },
                 },
@@ -559,12 +528,10 @@ export const actions = {
         await actions.getReceita()
         await actions.getMovimentacao()
         toast.success(response.message)
-
         state.chart?.destroy()
         state.chart = null
         state.chartCategoria?.destroy()
         state.chartCategoria = null
-
         state.abaSelecionada = 'dashboard'
         await nextTick()
         await actions.atualizarGraficos()
@@ -572,18 +539,73 @@ export const actions = {
         toast.error(response?.message || 'Erro ao salvar transação')
       }
     } catch (error: any) {
-      console.error('Erro no salvarTransacao:', error)
       toast.error(error?.message || 'Erro ao salvar transação')
     }
   },
 
-  adicionarCompra() {
-    state.compras.push({ ...state.novaCompra })
-    state.novaCompra = { nome: '', quantidade: 1 }
+  async getEstoque() {
+    try {
+      state.loadingEstoque = true
+      const response = await testeService.getEstoque()
+      state.compras = response || []
+    } catch {
+      toast.error('Erro ao carregar estoque')
+    } finally {
+      state.loadingEstoque = false
+    }
   },
 
-  usarItem(i: number) {
-    if (state.compras[i].quantidade > 0) state.compras[i].quantidade -= 1
+  async adicionarCompra() {
+    try {
+      const response = await testeService.insertEstoque({
+        nome: state.novaCompra.nome,
+        quantidade: state.novaCompra.quantidade,
+        imagem: (state.novaCompra as any).imagem ?? null,
+      })
+      if (response?.success) {
+        toast.success('Item adicionado ao estoque!')
+        state.novaCompra = { nome: '', quantidade: 1 }
+        await actions.getEstoque()
+      } else {
+        toast.error(response?.message || 'Erro ao adicionar item')
+      }
+    } catch (error: any) {
+      toast.error(error?.message || 'Erro ao adicionar item')
+    }
+  },
+
+  async usarItem(i: number) {
+    const item = state.compras[i]
+    if (!item?.id || item.quantidade <= 0) return
+    try {
+      await testeService.usarItemEstoque(item.id)
+      state.compras[i].quantidade -= 1
+    } catch (error: any) {
+      toast.error(error?.message || 'Erro ao usar item')
+    }
+  },
+
+  async aumentarItem(i: number) {
+    const item = state.compras[i]
+    if (!item?.id) return
+    try {
+      await testeService.aumentarItemEstoque(item.id, 1)
+      state.compras[i].quantidade += 1
+    } catch (error: any) {
+      toast.error(error?.message || 'Erro ao aumentar item')
+    }
+  },
+
+  async deleteEstoque(i: number) {
+    const item = state.compras[i]
+    if (!item?.id) return
+    try {
+      await testeService.deleteEstoque(item.id)
+      state.compras.splice(i, 1)
+      toast.success('Item removido do estoque!')
+    } catch (error: any) {
+      toast.error(error?.message || 'Erro ao remover item')
+    }
   },
 
   mostrarMensagem(texto: string, cor: string) {
@@ -592,38 +614,29 @@ export const actions = {
     state.snackbar = true
   },
 
-  salvarDados() {
-    localStorage.setItem('vencimentos', JSON.stringify(state.vencimentos))
-  },
-
-  carregarDados() {
-    const dados = localStorage.getItem('vencimentos')
-    if (dados) {
-      state.vencimentos = JSON.parse(dados)
+  async getVencimentos() {
+    try {
+      const response = await testeService.getVencimentos()
+      state.vencimentos = (response || []).map((v: any) => ({
+        ...v,
+        pago: v.status === 'pago',
+        lembretes: v.lembretes ? JSON.parse(v.lembretes) : [],
+        dataVencimento: v.data?.substring(0, 10) ?? '',
+        observacoes: v.observacao ?? '',
+        emailNotificacao: v.email ?? '',
+        enviarEmail: !!v.email,
+        adicionarCalendario: false,
+        recorrente: !!v.recorrente,
+      }))
+    } catch {
+      toast.error('Erro ao carregar vencimentos')
     }
-  },
-
-  togglePagamento(vencimento: Vencimento) {
-    actions.salvarDados()
-    actions.mostrarMensagem(
-      vencimento.pago ? 'Pagamento registrado!' : 'Pagamento desmarcado',
-      'success',
-    )
   },
 
   editarVencimento(vencimento: Vencimento) {
     state.modoEdicao = true
     state.vencimentoAtual = { ...vencimento }
     state.dialogCadastro = true
-  },
-
-  excluirVencimento(vencimento: Vencimento) {
-    if (confirm('Deseja realmente excluir este vencimento?')) {
-      const index = state.vencimentos.findIndex((v) => v.id === vencimento.id)
-      state.vencimentos.splice(index, 1)
-      actions.salvarDados()
-      actions.mostrarMensagem('Vencimento excluído!', 'success')
-    }
   },
 
   fecharDialog() {
@@ -645,50 +658,143 @@ export const actions = {
       return
     }
 
-    if (state.modoEdicao) {
-      const index = state.vencimentos.findIndex((item) => item.id === v.id)
-      state.vencimentos[index] = { ...v }
-      actions.mostrarMensagem('Vencimento atualizado!', 'success')
-    } else {
-      v.id = Date.now()
-      state.vencimentos.push({ ...v })
-      actions.mostrarMensagem('Vencimento cadastrado!', 'success')
+    const param = {
+      id: v.id,
+      descricao: v.descricao,
+      categoria: v.categoria,
+      valor: v.valor,
+      data: v.dataVencimento,
+      status: v.pago ? 'pago' : 'pendente',
+      observacao: v.observacoes,
+      email: v.enviarEmail ? v.emailNotificacao : null,
+      recorrente: v.recorrente,
+      lembretes: v.lembretes,
     }
 
-    if (v.adicionarCalendario) {
-      await actions.adicionarAoGoogleCalendar(v)
-    }
+    console.log('[salvarVencimento] param enviado ao banco:', param)
+    console.log('[salvarVencimento] enviarEmail:', v.enviarEmail)
+    console.log('[salvarVencimento] emailNotificacao:', v.emailNotificacao)
+    console.log('[salvarVencimento] lembretes:', v.lembretes)
 
-    if (v.enviarEmail) {
-      actions.agendarNotificacoesEmail(v)
-    }
-
-    actions.salvarDados()
-    actions.fecharDialog()
-  },
-
-  async adicionarAoGoogleCalendar(vencimento: Vencimento) {
     try {
-      const dataVencimento = new Date(vencimento.dataVencimento)
-
-      for (const diasAntes of vencimento.lembretes) {
-        const dataLembrete = new Date(dataVencimento)
-        dataLembrete.setDate(dataLembrete.getDate() - diasAntes)
-
-        const summary = `🔔 Lembrete: ${vencimento.descricao}`
-        const description = `Vencimento de ${vencimento.categoria}\nValor: ${formatarValor(vencimento.valor)}\n${vencimento.observacoes || ''}`
-        const fim = new Date(dataLembrete.getTime() + 30 * 60000)
-
-        const googleCalendarUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(summary)}&details=${encodeURIComponent(description)}&dates=${formatarDataCalendar(dataLembrete)}/${formatarDataCalendar(fim)}`
-
-        console.log('URL Google Calendar:', googleCalendarUrl)
+      if (state.modoEdicao) {
+        await testeService.updateVencimento(param)
+        actions.mostrarMensagem('Vencimento atualizado!', 'success')
+      } else {
+        await testeService.insertVencimento(param)
+        actions.mostrarMensagem('Vencimento cadastrado!', 'success')
       }
 
-      actions.mostrarMensagem('Lembretes adicionados ao calendário!', 'success')
-    } catch (error) {
-      console.error('Erro ao adicionar ao Google Calendar:', error)
-      actions.mostrarMensagem('Erro ao adicionar ao calendário', 'error')
+      if (v.adicionarCalendario) {
+        actions.adicionarAoGoogleCalendar(v)
+      }
+
+      console.log(
+        '[salvarVencimento] vai chamar agendarEmailsLembrete?',
+        v.enviarEmail && !!v.emailNotificacao && v.lembretes.length > 0,
+      )
+
+      if (v.enviarEmail && v.emailNotificacao && v.lembretes.length > 0) {
+        await actions.agendarEmailsLembrete(v)
+      }
+
+      await actions.getVencimentos()
+      actions.fecharDialog()
+    } catch (err) {
+      console.error('[salvarVencimento] erro:', err)
+      actions.mostrarMensagem('Erro ao salvar vencimento', 'error')
     }
+  },
+
+  async agendarEmailsLembrete(vencimento: Vencimento) {
+    console.log('[agendarEmailsLembrete] chamado com:', {
+      email: vencimento.emailNotificacao,
+      lembretes: vencimento.lembretes,
+      descricao: vencimento.descricao,
+    })
+
+    if (!vencimento.emailNotificacao || vencimento.lembretes.length === 0) {
+      console.warn('[agendarEmailsLembrete] Abortou: sem email ou sem lembretes')
+      return
+    }
+
+    for (const diasAntes of vencimento.lembretes) {
+      console.log(
+        `[agendarEmailsLembrete] Enviando para ${vencimento.emailNotificacao} — ${diasAntes}d antes`,
+      )
+      try {
+        await testeService.enviarEmailLembrete({
+          email: vencimento.emailNotificacao,
+          descricao: vencimento.descricao,
+          valor: vencimento.valor,
+          dataVencimento: vencimento.dataVencimento,
+          categoria: vencimento.categoria,
+          diasAntes,
+        })
+        console.log('[agendarEmailsLembrete] Email enviado com sucesso!')
+      } catch (err: any) {
+        console.error('[agendarEmailsLembrete] Erro:', err?.response?.data || err?.message || err)
+      }
+    }
+  },
+
+  async togglePagamento(vencimento: Vencimento) {
+    if (!vencimento.id) return
+    try {
+      await testeService.togglePagamentoVencimento(vencimento.id as number)
+      await actions.getVencimentos()
+      actions.mostrarMensagem(
+        vencimento.pago ? 'Pagamento desmarcado' : 'Pagamento registrado!',
+        'success',
+      )
+    } catch {
+      actions.mostrarMensagem('Erro ao atualizar pagamento', 'error')
+    }
+  },
+
+  async excluirVencimento(vencimento: Vencimento) {
+    if (!confirm('Deseja realmente excluir este vencimento?')) return
+    try {
+      await testeService.deleteVencimento(vencimento.id as number)
+      actions.mostrarMensagem('Vencimento excluído!', 'success')
+      await actions.getVencimentos()
+    } catch {
+      actions.mostrarMensagem('Erro ao excluir vencimento', 'error')
+    }
+  },
+
+  adicionarAoGoogleCalendar(vencimento: Vencimento) {
+    const dataVencimento = new Date(vencimento.dataVencimento)
+    const lembretes = vencimento.lembretes.length > 0 ? vencimento.lembretes : [0]
+
+    for (const diasAntes of lembretes) {
+      const dataEvento = new Date(dataVencimento)
+      dataEvento.setDate(dataEvento.getDate() - diasAntes)
+      const dataFim = new Date(dataEvento.getTime() + 30 * 60000)
+
+      const titulo =
+        diasAntes === 0
+          ? `Vencimento: ${vencimento.descricao}`
+          : `Lembrete (${diasAntes}d): ${vencimento.descricao}`
+
+      const detalhes = [
+        `Categoria: ${vencimento.categoria}`,
+        `Valor: ${formatarValor(vencimento.valor)}`,
+        vencimento.observacoes ? `Obs: ${vencimento.observacoes}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n')
+
+      const url =
+        `https://www.google.com/calendar/render?action=TEMPLATE` +
+        `&text=${encodeURIComponent(titulo)}` +
+        `&details=${encodeURIComponent(detalhes)}` +
+        `&dates=${formatarDataCalendar(dataEvento)}/${formatarDataCalendar(dataFim)}`
+
+      window.open(url, '_blank')
+    }
+
+    actions.mostrarMensagem('Evento(s) aberto(s) no Google Calendar!', 'success')
   },
 
   abrirPerfil() {
@@ -700,14 +806,12 @@ export const actions = {
   async onFotoSelecionada(event: Event) {
     const input = event.target as HTMLInputElement
     if (!input.files?.length) return
-
     state.perfilDialog.loadingFoto = true
     try {
       const formData = new FormData()
       formData.append('foto', input.files[0])
       const response = await testeService.uploadFoto(formData)
       state.usuarioFoto = response.foto_url
-      // Persiste a foto no localStorage para sobreviver ao reload
       localStorage.setItem('usuarioFoto', response.foto_url)
       toast.success('Foto atualizada com sucesso!')
     } catch (error: any) {
@@ -719,7 +823,6 @@ export const actions = {
 
   async salvarPerfil() {
     state.perfilDialog.erroPerfil = ''
-
     if (
       state.perfilDialog.novaSenha &&
       state.perfilDialog.novaSenha !== state.perfilDialog.confirmarSenha
@@ -727,28 +830,20 @@ export const actions = {
       state.perfilDialog.erroPerfil = 'As senhas não coincidem'
       return
     }
-
     state.perfilDialog.loadingSalvar = true
     try {
-      // Sempre envia nome e email para o backend:
-      // - Se ja existia no state (veio do servidor), reenvia o valor original para nao limpar
-      // - Se nao existia, envia o que o usuario digitou no formulario
       await testeService.atualizarPerfil({
         nome: state.usuarioNome || state.perfilDialog.nomeLocal,
         email: state.usuarioEmail || state.perfilDialog.emailLocal,
         senhaAtual: state.perfilDialog.senhaAtual || undefined,
         novaSenha: state.perfilDialog.novaSenha || undefined,
       })
-
-      // Atualiza o state local apenas se o campo estava vazio antes
-      if (!state.usuarioNome && state.perfilDialog.nomeLocal) {
+      if (!state.usuarioNome && state.perfilDialog.nomeLocal)
         state.usuarioNome = state.perfilDialog.nomeLocal
-      }
       if (!state.usuarioEmail && state.perfilDialog.emailLocal) {
         state.usuarioEmail = state.perfilDialog.emailLocal
         state.perfilForm.email = state.perfilDialog.emailLocal
       }
-
       state.perfilDialog.senhaAtual = ''
       state.perfilDialog.novaSenha = ''
       state.perfilDialog.confirmarSenha = ''
@@ -759,35 +854,5 @@ export const actions = {
     } finally {
       state.perfilDialog.loadingSalvar = false
     }
-  },
-
-  agendarNotificacoesEmail(vencimento: Vencimento) {
-    console.log('Notificações agendadas para:', {
-      email: vencimento.emailNotificacao,
-      vencimento: vencimento.descricao,
-      lembretes: vencimento.lembretes,
-    })
-
-    const emailConfig = {
-      to: vencimento.emailNotificacao,
-      subject: `Lembrete de Vencimento: ${vencimento.descricao}`,
-      body: `
-        Olá!
-
-        Este é um lembrete de que a conta "${vencimento.descricao}" vence em breve.
-
-        Categoria: ${vencimento.categoria}
-        Valor: ${formatarValor(vencimento.valor)}
-        Data de Vencimento: ${formatarData(vencimento.dataVencimento)}
-
-        ${vencimento.observacoes ? 'Observações: ' + vencimento.observacoes : ''}
-
-        Atenciosamente,
-        Sistema de Controle Financeiro
-      `,
-    }
-
-    // Aqui você faria a chamada real para o serviço de email
-    // sendEmail(emailConfig)
   },
 }

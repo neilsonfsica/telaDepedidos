@@ -17,9 +17,10 @@ onMounted(async () => {
     await actions.getDespesa()
     await actions.getReceita()
     await actions.getMovimentacao()
+    await actions.getEstoque()
+    await actions.getVencimentos()
     await nextTick()
     await actions.atualizarGraficos()
-    actions.carregarDados()
   }
 })
 
@@ -98,10 +99,11 @@ watch(
           <v-window-item value="compras">
             <Estoque
               :compras="state.compras"
-              :nova-compra="state.novaCompra"
-              @update:nova-compra="state.novaCompra = $event"
-              @adicionar="actions.adicionarCompra"
-              @usar-item="actions.usarItem"
+              v-model:novaCompra="state.novaCompra"
+              @adicionar="actions.adicionarCompra()"
+              @usar-item="actions.usarItem($event)"
+              @aumentar-item="actions.aumentarItem($event)"
+              @deletar-item="actions.deleteEstoque($event)"
             />
           </v-window-item>
 

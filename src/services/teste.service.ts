@@ -1,5 +1,5 @@
 import api from './api'
-import { iParamInsert, LoginDTO } from './interface.js'
+import { iParamInsert, LoginDTO, iEstoqueItem, iEstoqueUpdate } from './interface.js'
 
 const caminho = '/pedidos'
 
@@ -50,6 +50,77 @@ export const insertMovimentacao = async (param: iParamInsert) => {
   return data
 }
 
+export const getEstoque = async () => {
+  const { data } = await api.post(caminho, { call: 'getEstoque' })
+  return data
+}
+
+export const insertEstoque = async (param: iEstoqueItem) => {
+  const { data } = await api.post(caminho, { call: 'insertEstoque', param })
+  return data
+}
+
+export const updateEstoque = async (param: iEstoqueUpdate) => {
+  const { data } = await api.post(caminho, { call: 'updateEstoque', param })
+  return data
+}
+
+export const usarItemEstoque = async (id: number) => {
+  const { data } = await api.post(caminho, { call: 'usarItemEstoque', param: { id } })
+  return data
+}
+
+export const aumentarItemEstoque = async (id: number, quantidade: number = 1) => {
+  const { data } = await api.post(caminho, {
+    call: 'aumentarItemEstoque',
+    param: { id, quantidade },
+  })
+  return data
+}
+
+export const deleteEstoque = async (id: number) => {
+  const { data } = await api.post(caminho, { call: 'deleteEstoque', param: { id } })
+  return data
+}
+
+export const getVencimentos = async () => {
+  const { data } = await api.post(caminho, { call: 'getVencimentos' })
+  return data
+}
+
+export const insertVencimento = async (param: any) => {
+  const { data } = await api.post(caminho, { call: 'insertVencimento', param })
+  return data
+}
+
+export const updateVencimento = async (param: any) => {
+  const { data } = await api.post(caminho, { call: 'updateVencimento', param })
+  return data
+}
+
+export const togglePagamentoVencimento = async (id: number) => {
+  const { data } = await api.post(caminho, { call: 'togglePagamentoVencimento', param: { id } })
+  return data
+}
+
+export const deleteVencimento = async (id: number) => {
+  const { data } = await api.post(caminho, { call: 'deleteVencimento', param: { id } })
+  return data
+}
+
+export const enviarEmailLembrete = async (param: {
+  email: string
+  descricao: string
+  valor: string | number
+  dataVencimento: string
+  categoria: string
+  diasAntes: number
+}) => {
+  console.log('[service] chamando enviarEmailLembrete:', param)
+  const { data } = await api.post(caminho, { call: 'enviarEmailLembrete', param })
+  console.log('[service] resposta:', data)
+  return data
+}
 export default {
   login,
   cadastro,
@@ -59,4 +130,16 @@ export default {
   getReceita,
   insertMovimentacao,
   getMovimentacao,
+  getEstoque,
+  insertEstoque,
+  updateEstoque,
+  usarItemEstoque,
+  aumentarItemEstoque,
+  deleteEstoque,
+  getVencimentos,
+  insertVencimento,
+  updateVencimento,
+  togglePagamentoVencimento,
+  deleteVencimento,
+  enviarEmailLembrete,
 }
