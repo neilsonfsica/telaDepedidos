@@ -222,8 +222,6 @@ export const computeds = {
   ),
 }
 
-// ✅ Saldo usa state.receita e state.despesa (valores da API)
-// que são os mesmos valores exibidos nos cards de receita e despesa
 export const saldo: ComputedRef<number> = computed(() => state.receita - state.despesa)
 
 export function formatCurrency(value: number | string | null | undefined) {
@@ -444,7 +442,6 @@ export function gerarExcelEstoque(compras: Compra[]) {
 
   const wb = XLSX.utils.book_new()
 
-  // ── Aba 1: Lista completa ──────────────────────────────────────────
   const dadosLista = [
     ['RELATÓRIO DE ESTOQUE', '', '', '', ''],
     [`Gerado em: ${dataStr} às ${horaStr}`, '', '', '', ''],
@@ -480,7 +477,6 @@ export function gerarExcelEstoque(compras: Compra[]) {
 
   XLSX.utils.book_append_sheet(wb, ws1, 'Estoque Completo')
 
-  // ── Aba 2: Itens em baixa ──────────────────────────────────────────
   const baixos = compras
     .filter((c) => c.quantidade <= 5)
     .sort((a, b) => a.quantidade - b.quantidade)
@@ -508,7 +504,6 @@ export function gerarExcelEstoque(compras: Compra[]) {
 
   XLSX.utils.book_append_sheet(wb, ws2, 'Reposição Necessária')
 
-  // ── Aba 3: Resumo por categoria ────────────────────────────────────
   const porCategoria: Record<string, { total: number; unidades: number }> = {}
   compras.forEach((c) => {
     const cat = findCategoria(c.nome)
@@ -621,7 +616,6 @@ export const actions = {
     try {
       const response = await testeService.getReceita()
       state.receita = Number(response?.total_receita) || 0
-      // ✅ Atualiza state.saldo junto para manter consistência
       state.saldo = state.receita - state.despesa
     } catch {
       state.receita = 0
@@ -644,12 +638,10 @@ export const actions = {
     const despesa = state.despesa
     const maxVal = Math.max(receita, despesa, 1)
 
-    // ── Gráfico de barras ──
     const canvas = document.getElementById('grafico') as HTMLCanvasElement | null
     if (canvas) {
       const ctx = canvas.getContext('2d')
       if (ctx) {
-        // Destrói qualquer instância existente no canvas (inclusive a do Dashboard.vue)
         const existing = Chart.getChart(canvas)
         if (existing) existing.destroy()
         state.chart?.destroy()
@@ -714,7 +706,6 @@ export const actions = {
       }
     }
 
-    // ── Gráfico de pizza ──
     const despesasPorCategoria: Record<string, number> = {}
     state.transacoes
       .filter((t) => t.tipo === 'Despesa')
@@ -727,7 +718,6 @@ export const actions = {
     if (canvasCat) {
       const ctxCat = canvasCat.getContext('2d')
       if (ctxCat) {
-        // Destrói qualquer instância existente no canvas (inclusive a do Dashboard.vue)
         const existingCat = Chart.getChart(canvasCat)
         if (existingCat) existingCat.destroy()
         state.chartCategoria?.destroy()

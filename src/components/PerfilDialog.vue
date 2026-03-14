@@ -40,8 +40,6 @@ const onFotoSelecionada = (event: Event) => {
   emit('fotoSelecionada', event)
 }
 
-// Emite salvarPerfil informando ao pai quais campos devem ser atualizados.
-// Se usuarioNome/usuarioEmail já existem (vêm do servidor), não devem ser sobrescritos.
 const handleSalvarPerfil = () => {
   emit('salvarPerfil', {
     atualizarNome: !props.usuarioNome,
@@ -58,7 +56,6 @@ const handleSalvarPerfil = () => {
     persistent
   >
     <v-card class="perfil-card">
-      <!-- HEADER -->
       <v-card-title class="pa-6 pb-4 d-flex align-center justify-space-between">
         <span class="text-h5 font-weight-bold" style="color: #00ff88"> Meu Perfil </span>
 
@@ -70,7 +67,6 @@ const handleSalvarPerfil = () => {
       <v-divider style="border-color: rgba(255, 255, 255, 0.08)" />
 
       <v-card-text class="pa-6">
-        <!-- FOTO -->
         <div class="d-flex flex-column align-center mb-6">
           <v-avatar
             size="100"
@@ -110,9 +106,6 @@ const handleSalvarPerfil = () => {
         <v-divider class="mb-4" style="border-color: rgba(255, 255, 255, 0.08)" />
 
         <p class="text-caption text-grey mb-3">DADOS PESSOAIS</p>
-
-        <!-- NOME -->
-
         <v-text-field
           v-if="!usuarioNome"
           :model-value="nomeLocal"
@@ -136,9 +129,6 @@ const handleSalvarPerfil = () => {
           readonly
           hide-details
         />
-
-        <!-- EMAIL -->
-
         <v-text-field
           v-if="!usuarioEmail"
           :model-value="emailLocal"

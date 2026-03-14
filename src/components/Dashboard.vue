@@ -3,7 +3,6 @@ import { computed, onMounted, watch } from 'vue'
 import { formatCurrency } from '../geral'
 import Chart from 'chart.js/auto'
 
-// ─── Props ───────────────────────────────────────────────────────────────────
 const props = defineProps<{
   receita: number
   despesa: number
@@ -12,7 +11,6 @@ const props = defineProps<{
   transacoes: { categoria: string; valor: number; tipo: 'receita' | 'despesa' }[]
 }>()
 
-// ─── Computeds ───────────────────────────────────────────────────────────────
 const taxaEconomia = computed(() => {
   if (!props.receita || props.receita === 0) return 0
   return Math.round(((props.receita - props.despesa) / props.receita) * 100)
@@ -40,7 +38,6 @@ const percentualMaior = computed(() => {
   return Math.round((maiorCategoria.value.valor / props.despesa) * 100)
 })
 
-// ─── Gráficos ────────────────────────────────────────────────────────────────
 let chartEvolucao: Chart | null = null
 let chartBarras: Chart | null = null
 let chartCategorias: Chart | null = null
@@ -304,9 +301,7 @@ watch(() => [props.evolucao, props.transacoes, props.receita, props.despesa], re
 </script>
 
 <template>
-  <!-- ── Cards de resumo ──────────────────────────────────── -->
   <v-row class="mb-2">
-    <!-- Receitas -->
     <v-col cols="12" md="3">
       <v-card
         rounded="xl"
@@ -331,7 +326,6 @@ watch(() => [props.evolucao, props.transacoes, props.receita, props.despesa], re
       </v-card>
     </v-col>
 
-    <!-- Despesas -->
     <v-col cols="12" md="3">
       <v-card
         rounded="xl"
@@ -356,7 +350,6 @@ watch(() => [props.evolucao, props.transacoes, props.receita, props.despesa], re
       </v-card>
     </v-col>
 
-    <!-- Saldo -->
     <v-col cols="12" md="3">
       <v-card
         rounded="xl"
@@ -386,7 +379,6 @@ watch(() => [props.evolucao, props.transacoes, props.receita, props.despesa], re
       </v-card>
     </v-col>
 
-    <!-- Taxa de Economia -->
     <v-col cols="12" md="3">
       <v-card
         rounded="xl"
@@ -410,9 +402,7 @@ watch(() => [props.evolucao, props.transacoes, props.receita, props.despesa], re
     </v-col>
   </v-row>
 
-  <!-- ── Maior gasto + Evolução 6 meses ───────────────────── -->
   <v-row class="mb-2">
-    <!-- Maior categoria -->
     <v-col cols="12" md="4" v-if="maiorCategoria">
       <v-card
         rounded="xl"
@@ -469,7 +459,6 @@ watch(() => [props.evolucao, props.transacoes, props.receita, props.despesa], re
       </v-card>
     </v-col>
 
-    <!-- Evolução 6 meses -->
     <v-col cols="12" :md="maiorCategoria ? 8 : 12">
       <v-card
         rounded="xl"
@@ -501,7 +490,6 @@ watch(() => [props.evolucao, props.transacoes, props.receita, props.despesa], re
     </v-col>
   </v-row>
 
-  <!-- ── Gráficos originais ────────────────────────────────── -->
   <v-row>
     <v-col cols="12" md="6">
       <v-card

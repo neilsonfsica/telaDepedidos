@@ -13,7 +13,7 @@ defineEmits<{
 <template>
   <v-app-bar class="topbar" elevation="0" height="60">
     <div class="topbar-inner">
-      <!-- Brand -->
+
       <div class="brand" @click="$emit('abrirPerfil')">
         <div class="brand-logo">
           <v-icon size="16" color="#00ff88">mdi-chart-line</v-icon>
@@ -21,7 +21,7 @@ defineEmits<{
         <span class="brand-text">Controle <em>Financeiro</em></span>
       </div>
 
-      <!-- User -->
+
       <div class="user-area">
         <div class="user-pill" @click="$emit('abrirPerfil')">
           <div class="avatar-ring">
@@ -76,7 +76,6 @@ defineEmits<{
   height: 100%;
 }
 
-/* Brand */
 .brand {
   display: flex;
   align-items: center;
@@ -114,7 +113,6 @@ defineEmits<{
   font-style: normal;
 }
 
-/* User area */
 .user-area {
   display: flex;
   align-items: center;
